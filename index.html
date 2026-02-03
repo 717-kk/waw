@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- 启用 iOS 全屏模式 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- 设置状态栏样式 -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <!-- 禁止自动识别电话号码 -->
+    <meta name="format-detection" content="telephone=no">
+    <title>waw</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="content">
+            <!-- 推荐页面 -->
+            <div id="recommend" class="page">
+                <div class="recommend-header">
+                    <div class="search-bar">
+                        <input type="text" placeholder="搜索..." class="search-input">
+                        <div class="search-actions">
+                            <button class="icon-btn-small" title="搜索">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button class="icon-btn-small" title="刷新">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="tags-bar">
+                        <div class="tag-item active">全部</div>
+                        <div class="tag-item">标签1</div>
+                        <div class="tag-item">标签2</div>
+                        <div class="tag-item">标签3</div>
+                        <div class="tag-item">标签4</div>
+                    </div>
+                </div>
+                
+                <div class="recommend-content">
+                    <div class="character-grid">
+                        <!-- 4个角色卡 -->
+                        <div class="character-card">
+                            <div class="card-image"></div>
+                            <div class="card-info">
+                                <div class="card-name">角色名称 1</div>
+                            </div>
+                        </div>
+                        <div class="character-card">
+                            <div class="card-image"></div>
+                            <div class="card-info">
+                                <div class="card-name">角色名称 2</div>
+                            </div>
+                        </div>
+                        <div class="character-card">
+                            <div class="card-image"></div>
+                            <div class="card-info">
+                                <div class="card-name">角色名称 3</div>
+                            </div>
+                        </div>
+                        <div class="character-card">
+                            <div class="card-image"></div>
+                            <div class="card-info">
+                                <div class="card-name">角色名称 4</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 动态页面 -->
+            <div id="moments" class="page">
+                <div class="placeholder-content">动态页面内容</div>
+            </div>
+
+            <!-- 消息页面 -->
+            <div id="messages" class="page">
+                <div class="placeholder-content">消息页面内容</div>
+            </div>
+
+            <!-- 我的页面 -->
+            <div id="profile" class="page active">
+                <button id="theme-toggle" class="theme-toggle" aria-label="切换主题">
+                    <span class="icon">🌙</span>
+                </button>
+                <div class="profile-header">
+                    <div class="avatar" id="avatar-container">
+                        <img id="avatar-img" src="" style="display:none; width:100%; height:100%; object-fit:cover;">
+                        <!-- 使用一个占位符图片或纯色块 -->
+                        <div class="avatar-placeholder" id="avatar-placeholder">头</div>
+                        <input type="file" id="avatar-input" accept="image/*" style="display: none;">
+                    </div>
+                    <div class="user-info">
+                        <div class="nickname" id="nickname">昵称</div>
+                        <div class="user-id">ID: <span id="user-id-val">123456</span></div>
+                    </div>
+                </div>
+                
+                <div class="divider"></div>
+
+                <div class="menu-list">
+                    <div class="menu-item" id="menu-api-settings">API 设置</div>
+                    <div class="menu-item" id="menu-worldbook">规则句</div>
+                    <div class="menu-item">CSS</div>
+                    <div class="menu-item">数据</div>
+                </div>
+            </div>
+
+            <!-- 规则句页面 -->
+            <div id="worldbook" class="page">
+                <div class="page-header">
+                    <button class="header-btn" id="back-to-profile-btn">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h2>规则句</h2>
+                    <div class="header-actions">
+                        <button class="header-btn" id="add-folder-btn" title="新建文件夹">
+                            <i class="fas fa-folder-plus"></i>
+                        </button>
+                        <button class="header-btn" id="add-worldbook-btn" title="新增世界书">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="page-content">
+                    <div class="empty-state" id="worldbook-empty-state">
+                        <i class="fas fa-book"></i>
+                        <p>这里将记录你的规则句...</p>
+                    </div>
+                    <div class="folder-list" id="folder-list">
+                        <!-- 文件夹列表将通过 JS 动态生成 -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 底部导航栏 -->
+        <nav id="bottom-nav">
+            <div class="nav-item" data-target="recommend">
+                <span class="nav-text">推荐</span>
+            </div>
+            <div class="nav-item" data-target="moments">
+                <span class="nav-text">动态</span>
+            </div>
+            <div class="nav-item" data-target="messages">
+                <span class="nav-text">消息</span>
+            </div>
+            <div class="nav-item active" data-target="profile">
+                <span class="nav-text">我的</span>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 新增/编辑规则句页面 -->
+    <div class="sub-page" id="add-worldbook-page">
+        <div class="page-header">
+            <button class="header-btn" id="close-add-worldbook-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2 id="add-page-title">新增规则句</h2>
+            <div style="width: 32px;"></div>
+        </div>
+        <div class="page-content">
+            <div class="form-group">
+                <label>名称</label>
+                <input type="text" id="worldbook-title-input" placeholder="输入名称...">
+            </div>
+            <div class="form-group">
+                <label>选择文件夹</label>
+                <div class="custom-select-wrapper">
+                    <div class="custom-select" id="folder-select">
+                        <div class="custom-select-trigger">
+                            <span id="selected-folder-text">无</span>
+                            <i class="fas fa-chevron-down arrow"></i>
+                        </div>
+                        <div class="custom-options" id="folder-options">
+                            <div class="custom-option selected" data-value="">无</div>
+                            <!-- 选项动态生成 -->
+                        </div>
+                    </div>
+                    <input type="hidden" id="selected-folder-value" value="">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>内容</label>
+                <textarea id="worldbook-content-input" placeholder="输入内容..." style="height: 300px;"></textarea>
+            </div>
+            <button id="save-worldbook-item-btn" class="save-btn">保存</button>
+        </div>
+    </div>
+
+    <!-- API 设置页面 -->
+    <div class="sub-page" id="api-settings-page">
+        <div class="page-header">
+            <button class="header-btn" id="close-api-settings-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2>API 设置</h2>
+            <div style="width: 32px;"></div>
+        </div>
+        <div class="page-content">
+            <div class="form-group">
+                <label for="api-url">API URL</label>
+                <input type="text" id="api-url" placeholder="例如: https://api.openai.com/v1">
+            </div>
+            <div class="form-group">
+                <label for="api-key">API Key</label>
+                <input type="password" id="api-key" placeholder="sk-...">
+            </div>
+            <div class="form-group">
+                <label>模型</label>
+                <div class="model-input-group">
+                    <div class="custom-select-wrapper">
+                        <div class="custom-select" id="model-select-custom">
+                            <div class="custom-select-trigger">
+                                <span id="selected-model-text">请选择或拉取模型</span>
+                                <i class="fas fa-chevron-down arrow"></i>
+                            </div>
+                            <div class="custom-options" id="model-options">
+                                <!-- 选项将通过 JS 动态生成 -->
+                                <div class="custom-option selected" data-value="">请选择或拉取模型</div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="model-select-value" value="">
+                    </div>
+                    <button id="fetch-models-btn" class="icon-btn" title="拉取模型列表">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="form-group">
+                <div class="range-header">
+                    <label for="temperature">温度</label>
+                    <span id="temp-value">0.7</span>
+                </div>
+                <input type="range" id="temperature" min="0" max="2" step="0.1" value="0.7">
+                <div class="range-labels">
+                    <span>0 (稳定)</span>
+                    <span>2 (创造性)</span>
+                </div>
+            </div>
+            <button id="save-settings-btn" class="save-btn">保存配置</button>
+        </div>
+    </div>
+
+    <!-- 模态框组件 -->
+    
+    <!-- 新建文件夹模态框 -->
+    <div class="modal-overlay" id="new-folder-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>新建文件夹</h3>
+                <button class="header-btn" onclick="closeModal('new-folder-modal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="folder-name-input" placeholder="输入文件夹名称...">
+                <div class="modal-btn-group">
+                    <button class="modal-btn btn-cancel" onclick="closeModal('new-folder-modal')">取消</button>
+                    <button class="modal-btn btn-confirm" id="confirm-folder-btn">创建</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用确认模态框 -->
+    <div class="modal-overlay" id="universal-confirm-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="confirm-modal-title">确认</h3>
+                <button class="header-btn" onclick="closeModal('universal-confirm-modal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirm-modal-message" style="text-align: center; margin-bottom: 15px; color: rgba(255,255,255,0.8);"></p>
+                <div class="modal-btn-group">
+                    <button class="modal-btn btn-cancel" onclick="closeModal('universal-confirm-modal')">取消</button>
+                    <button class="modal-btn btn-danger" id="confirm-modal-ok-btn">删除</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通用输入模态框 (用于重命名) -->
+    <div class="modal-overlay" id="universal-prompt-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="prompt-modal-title">输入</h3>
+                <button class="header-btn" onclick="closeModal('universal-prompt-modal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="prompt-modal-input" placeholder="请输入...">
+                <div class="modal-btn-group">
+                    <button class="modal-btn btn-cancel" onclick="closeModal('universal-prompt-modal')">取消</button>
+                    <button class="modal-btn btn-confirm" id="prompt-modal-ok-btn">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
