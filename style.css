@@ -81,6 +81,15 @@ textarea:focus {
     border-color: var(--accent-color);
 }
 
+/* 隐藏 textarea 滚动条 */
+textarea {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+}
+textarea::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+}
+
 body {
     font-family: var(--main-font);
     background-color: var(--bg-color);
@@ -622,6 +631,11 @@ textarea { resize: none; }
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     max-height: 200px;
     overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+.custom-options::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
 }
 .custom-select.open .custom-options {
     opacity: 1;
@@ -814,7 +828,7 @@ input[type="range"]::-webkit-slider-thumb {
 
 .search-bar {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     align-items: center;
 }
 
@@ -825,11 +839,11 @@ input[type="range"]::-webkit-slider-thumb {
 
 .search-actions {
     display: flex;
-    gap: 8px;
+    gap: -4px;
 }
 
 .icon-btn-small {
-    width: 40px;
+    width: 36px;
     height: 48px; /* 与输入框高度一致 */
     background: transparent;
     border: none;
@@ -848,29 +862,73 @@ input[type="range"]::-webkit-slider-thumb {
 
 .tags-bar {
     display: flex;
-    gap: 10px;
+    gap: 0; /* 移除间距，让点击区域相连 */
     overflow-x: auto;
-    padding-bottom: 5px;
+    border-bottom: 1px solid var(--border-color); /* 添加底部分界线 */
     /* 隐藏滚动条 */
     scrollbar-width: none;
 }
 .tags-bar::-webkit-scrollbar { display: none; }
 
 .tag-item {
-    padding: 6px 16px;
-    background-color: var(--tag-bg);
-    border-radius: 20px;
-    font-size: 14px;
+    padding: 10px 16px;
+    background-color: transparent; /* 移除背景 */
+    border-radius: 0; /* 移除圆角 */
+    font-size: 15px;
     color: var(--secondary-text-color);
     white-space: nowrap;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: color 0.2s;
+    position: relative; /* 用于定位下划线 */
+    flex-shrink: 0;
 }
 
 .tag-item.active {
-    background-color: var(--tag-active-bg);
-    color: var(--tag-active-text);
-    font-weight: 500;
+    background-color: transparent;
+    color: var(--text-color); /* 选中时文字颜色 */
+    font-weight: 600;
+}
+
+/* 选中时的下划线效果 */
+.tag-item.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 16px; /* 对齐文字左侧 (假设 padding-left 是 16px) */
+    right: 16px; /* 对齐文字右侧 */
+    height: 3px;
+    background-color: var(--tag-active-bg); /* 使用原有的交互颜色 */
+    border-radius: 3px 3px 0 0;
+}
+
+.tag-delete-btn {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 14px;
+    height: 14px;
+    background-color: var(--danger-color);
+    color: white;
+    border-radius: 50%;
+    display: none; /* 默认隐藏 */
+    justify-content: center;
+    align-items: center;
+    font-size: 9px;
+    z-index: 10;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+}
+
+.tag-item.show-delete .tag-delete-btn {
+    display: flex;
+}
+
+.add-tag-btn {
+    color: var(--secondary-text-color);
+    opacity: 0.8;
+}
+.add-tag-btn:hover {
+    opacity: 1;
+    color: var(--text-color);
 }
 
 .recommend-content {
@@ -890,9 +948,9 @@ input[type="range"]::-webkit-slider-thumb {
 
 .character-card {
     background-color: var(--card-bg);
-    border-radius: 16px;
+    border-radius: 24px;
     overflow: hidden;
-    aspect-ratio: 3/4; /* 保持卡片比例 */
+    height: 240px; /* 固定高度确保卡片呈长方形 */
     position: relative;
     box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     cursor: pointer;
@@ -923,4 +981,12 @@ input[type="range"]::-webkit-slider-thumb {
     font-size: 14px;
     font-weight: 500;
     text-align: center;
+}
+
+.custom-tag-content {
+    padding: 20px;
+    color: var(--text-color);
+    font-size: 16px;
+    line-height: 1.6;
+    white-space: pre-wrap; /* 保留换行 */
 }
