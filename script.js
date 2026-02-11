@@ -141,6 +141,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 搜索逻辑 ---
     initSearch();
+
+    // --- 角色详情页逻辑 ---
+    initCharacterDetail();
 });
 
 // --- 搜索与角色生成逻辑 ---
@@ -300,6 +303,11 @@ function renderCharacters(characters) {
                 <div class="card-desc" style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${char.background}</div>
             </div>
         `;
+        
+        // 绑定点击事件
+        card.addEventListener('click', () => {
+            showCharacterDetail(char);
+        });
         
         grid.appendChild(card);
     });
@@ -1100,4 +1108,65 @@ function loadSettings() {
         if (tempSlider) tempSlider.value = settings.temperature || 0.7;
         if (tempValue) tempValue.textContent = settings.temperature || 0.7;
     }
+}
+
+// --- 角色详情页逻辑 ---
+
+function initCharacterDetail() {
+    const detailPage = document.getElementById('character-detail-page');
+    const closeBtn = document.getElementById('close-detail-btn');
+    const startChatBtn = document.getElementById('start-chat-btn');
+
+    if (closeBtn && detailPage) {
+        closeBtn.addEventListener('click', () => {
+            detailPage.classList.remove('active');
+        });
+    }
+
+    if (startChatBtn) {
+        startChatBtn.addEventListener('click', () => {
+            showToast('开始对话功能开发中...');
+        });
+    }
+
+    // 为初始的静态卡片绑定点击事件
+    const staticCards = document.querySelectorAll('.character-card');
+    staticCards.forEach((card, index) => {
+        // 检查是否已经绑定过（通过检查是否有 onclick 属性或其他标记，这里简单起见直接绑定，
+        // 但要注意 renderCharacters 会重新生成卡片，所以这里主要针对 HTML 中硬编码的卡片）
+        // 由于 renderCharacters 会清空 grid，所以这里只在页面加载时对静态卡片生效
+        // 为了演示效果，我们给静态卡片一些假数据
+        const name = card.querySelector('.card-name').textContent;
+        const mockData = {
+            name: name,
+            age: '未知',
+            identity: '神秘人',
+            background: '这是一个神秘的角色，还没有详细的背景故事。',
+            color: '#3a6ea5'
+        };
+        
+        card.addEventListener('click', () => {
+            showCharacterDetail(mockData);
+        });
+    });
+}
+
+function showCharacterDetail(char) {
+    const detailPage = document.getElementById('character-detail-page');
+    if (!detailPage) return;
+
+    // 填充数据
+    document.getElementById('detail-name').textContent = char.name || '未知角色';
+    document.getElementById('detail-age').textContent = char.age || '未知年龄';
+    document.getElementById('detail-identity').textContent = char.identity || '未知身份';
+    document.getElementById('detail-background').textContent = char.background || '暂无背景故事';
+    
+    // 设置头像颜色
+    const avatar = document.getElementById('detail-avatar');
+    if (avatar) {
+        avatar.style.backgroundColor = char.color || 'var(--card-bg)';
+    }
+
+    // 显示页面
+    detailPage.classList.add('active');
 }
