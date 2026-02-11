@@ -135,7 +135,351 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- API 设置模块集成 ---
     initApiSettings();
+
+    // --- 标签栏逻辑 ---
+    initTagsBar();
+
+    // --- 搜索逻辑 ---
+    initSearch();
 });
+
+// --- 搜索与角色生成逻辑 ---
+
+function initSearch() {
+    const searchBtn = document.querySelector('.search-actions .icon-btn-small[title="搜索"]');
+    const refreshBtn = document.querySelector('.search-actions .icon-btn-small[title="刷新"]');
+    const searchInput = document.querySelector('.search-input');
+    const grid = document.querySelector('.character-grid');
+
+    if (!searchBtn || !searchInput || !grid) return;
+
+    const performSearch = async (keyword) => {
+        // 获取 API 配置
+        const settings = JSON.parse(localStorage.getItem('starSettings') || '{}');
+        if (!settings.apiUrl || !settings.apiKey) {
+            showToast('请先在“我的”页面配置 API');
+            return;
+        }
+
+        // 显示加载状态
+        const originalBtnContent = searchBtn.innerHTML;
+        searchBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        searchBtn.disabled = true;
+        if (refreshBtn) {
+            refreshBtn.classList.add('rotating');
+            refreshBtn.disabled = true;
+        }
+        
+        // 简单的 Loading 占位
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--secondary-text-color);">正在生成角色...</div>';
+
+        try {
+            const characters = await fetchCharactersFromApi(keyword, settings);
+            renderCharacters(characters);
+        } catch (error) {
+            console.error(error);
+            showToast('生成失败: ' + error.message);
+            grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--danger-color);">生成失败，请重试</div>';
+        } finally {
+            searchBtn.innerHTML = originalBtnContent;
+            searchBtn.disabled = false;
+            if (refreshBtn) {
+                refreshBtn.classList.remove('rotating');
+                refreshBtn.disabled = false;
+            }
+        }
+    };
+
+    searchBtn.addEventListener('click', () => {
+        const keyword = searchInput.value.trim();
+        if (!keyword) {
+            showToast('请输入搜索关键词');
+            return;
+        }
+        performSearch(keyword);
+    });
+
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => {
+            let keyword = searchInput.value.trim();
+            if (!keyword) {
+                keyword = "随机生成多样化的角色";
+            }
+            performSearch(keyword);
+        });
+    }
+}
+
+async function fetchCharactersFromApi(keyword, settings) {
+    const prompt = `请根据关键词"${keyword}"创作4个虚构角色的详细设定。
+    
+要求：
+1. 返回格式必须是严格的 JSON 数组，不要包含 markdown 代码块标记（如 \`\`\`json）。
+2. 数组中包含 4 个对象。
+3. 每个对象包含以下字段：
+   - name: 姓名
+   - age: 年龄 (字符串，如 "25岁")
+   - identity: 身份/职业
+   - background: 背景故事 (50字以内)
+   - color: 代表色 (十六进制颜色代码，如 "#FF5733")
+
+示例格式：
+[{"name":"张三","age":"20岁","identity":"学生","background":"...","color":"#123456"}, ...]`;
+
+    let apiUrl = settings.apiUrl.replace(/\/$/, ''); // 去除尾部斜杠
+    // 简单的 URL 补全逻辑
+    if (!apiUrl.includes('/chat/completions')) {
+        if (apiUrl.endsWith('/v1')) {
+            apiUrl += '/chat/completions';
+        } else {
+            apiUrl += '/v1/chat/completions';
+        }
+    }
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${settings.apiKey}`
+        },
+        body: JSON.stringify({
+            model: settings.model || 'gpt-3.5-turbo',
+            messages: [
+                { role: "system", content: "你是一个创意角色生成助手。请只返回 JSON 数据。" },
+                { role: "user", content: prompt }
+            ],
+            temperature: parseFloat(settings.temperature) || 0.7
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`API 请求失败: ${response.status}`);
+    }
+
+    const data = await response.json();
+    // 兼容不同的 API 返回格式 (有些可能直接返回 content，有些在 choices 里)
+    const content = data.choices?.[0]?.message?.content || data.content || '';
+    
+    if (!content) {
+        throw new Error("API 返回内容为空");
+    }
+
+    // 尝试解析 JSON，处理可能存在的 markdown 标记
+    try {
+        const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleanContent);
+    } catch (e) {
+        console.error("JSON 解析失败", content);
+        throw new Error("API 返回格式错误");
+    }
+}
+
+function renderCharacters(characters) {
+    const grid = document.querySelector('.character-grid');
+    grid.innerHTML = '';
+
+    if (!Array.isArray(characters) || characters.length === 0) {
+        grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">未生成有效数据</div>';
+        return;
+    }
+
+    characters.forEach(char => {
+        const card = document.createElement('div');
+        card.className = 'character-card';
+        
+        // 使用生成的颜色作为背景，如果没有则用默认
+        const bgColor = char.color || 'var(--card-bg)';
+        
+        card.innerHTML = `
+            <div class="card-image" style="background-color: ${bgColor}; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); font-size: 40px;">
+                <i class="fas fa-user"></i>
+            </div>
+            <div class="card-info">
+                <div class="card-name" style="font-size: 16px; font-weight: bold;">${char.name}</div>
+                <div class="card-detail" style="font-size: 12px; color: rgba(255,255,255,0.8); margin-top: 4px;">${char.age} | ${char.identity}</div>
+                <div class="card-desc" style="font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">${char.background}</div>
+            </div>
+        `;
+        
+        grid.appendChild(card);
+    });
+}
+
+// --- 标签栏逻辑 ---
+
+let currentEditingTag = null;
+
+function initTagsBar() {
+    const tagsBar = document.getElementById('tags-bar');
+    const addTagBtn = document.getElementById('add-tag-btn');
+    const confirmAddTagBtn = document.getElementById('confirm-add-tag-btn');
+    
+    // 标签操作模态框按钮
+    const editTagActionBtn = document.getElementById('edit-tag-action-btn');
+    const deleteTagActionBtn = document.getElementById('delete-tag-action-btn');
+
+    if (!tagsBar || !addTagBtn) return;
+
+    // 绑定添加按钮事件
+    addTagBtn.addEventListener('click', () => {
+        currentEditingTag = null;
+        document.getElementById('add-tag-modal-title').textContent = '添加新标签';
+        document.getElementById('new-tag-name').value = '';
+        document.getElementById('new-tag-content').value = '';
+        openModal('add-tag-modal');
+        document.getElementById('new-tag-name').focus();
+    });
+
+    // 确认添加/保存标签
+    if (confirmAddTagBtn) {
+        confirmAddTagBtn.addEventListener('click', () => {
+            const name = document.getElementById('new-tag-name').value.trim();
+            const content = document.getElementById('new-tag-content').value.trim();
+            
+            if (name) {
+                if (currentEditingTag) {
+                    // 编辑模式
+                    updateTag(currentEditingTag, name, content);
+                } else {
+                    // 新增模式
+                    addNewTag(name, content);
+                }
+                closeModal('add-tag-modal');
+            } else {
+                showToast('请输入标签名称');
+            }
+        });
+    }
+
+    // 绑定现有标签点击事件 (委托)
+    tagsBar.addEventListener('click', (e) => {
+        const tag = e.target.closest('.tag-item');
+        // 忽略添加按钮和删除按钮的点击（删除按钮有自己的事件）
+        if (tag && !tag.classList.contains('add-tag-btn') && !e.target.closest('.tag-delete-btn')) {
+            handleTagClick(tag);
+        }
+    });
+
+    // 绑定标签操作模态框事件
+    if (editTagActionBtn) {
+        editTagActionBtn.addEventListener('click', () => {
+            if (currentEditingTag) {
+                closeModal('tag-actions-modal');
+                // 打开编辑模态框
+                document.getElementById('add-tag-modal-title').textContent = '编辑标签';
+                document.getElementById('new-tag-name').value = currentEditingTag.querySelector('span').textContent;
+                document.getElementById('new-tag-content').value = currentEditingTag.dataset.content || '';
+                openModal('add-tag-modal');
+            }
+        });
+    }
+
+    if (deleteTagActionBtn) {
+        deleteTagActionBtn.addEventListener('click', () => {
+            if (currentEditingTag) {
+                closeModal('tag-actions-modal');
+                const name = currentEditingTag.querySelector('span').textContent;
+                showConfirmModal(`确定删除标签 "${name}" 吗？`, () => {
+                    // 如果删除的是当前激活的标签，切换回推荐
+                    if (currentEditingTag.classList.contains('active')) {
+                        const recommendTag = tagsBar.querySelector('[data-tag="recommend"]');
+                        if (recommendTag) handleTagClick(recommendTag);
+                    }
+                    currentEditingTag.remove();
+                    currentEditingTag = null;
+                });
+            }
+        });
+    }
+}
+
+function handleTagClick(tag) {
+    const tagsBar = document.getElementById('tags-bar');
+    const isRecommend = tag.dataset.tag === 'recommend';
+    const isActive = tag.classList.contains('active');
+
+    // 如果点击的是“推荐”标签
+    if (isRecommend) {
+        switchTag(tag);
+        renderTagContent(tag);
+        return;
+    }
+
+    // 如果点击的是其他标签
+    if (isActive) {
+        // 如果已经激活，再次点击弹出操作菜单
+        currentEditingTag = tag;
+        openModal('tag-actions-modal');
+    } else {
+        // 如果未激活，切换到该标签
+        switchTag(tag);
+        renderTagContent(tag);
+    }
+}
+
+function updateTag(tag, name, content) {
+    tag.querySelector('span').textContent = name;
+    tag.dataset.content = content;
+    // 如果当前正在显示该标签的内容，实时更新
+    if (tag.classList.contains('active')) {
+        renderTagContent(tag);
+    }
+    showToast('标签已更新');
+}
+
+function switchTag(tag) {
+    const tagsBar = document.getElementById('tags-bar');
+    tagsBar.querySelectorAll('.tag-item').forEach(t => t.classList.remove('active'));
+    tag.classList.add('active');
+}
+
+function renderTagContent(tag) {
+    const container = document.querySelector('.recommend-content');
+    const grid = container.querySelector('.character-grid');
+    let customContent = container.querySelector('.custom-tag-content');
+
+    // 如果没有自定义内容容器，创建一个
+    if (!customContent) {
+        customContent = document.createElement('div');
+        customContent.className = 'custom-tag-content';
+        customContent.style.display = 'none';
+        container.appendChild(customContent);
+    }
+
+    if (tag.dataset.tag === 'recommend') {
+        if (grid) grid.style.display = 'grid';
+        customContent.style.display = 'none';
+    } else {
+        if (grid) grid.style.display = 'none';
+        customContent.style.display = 'block';
+        customContent.textContent = tag.dataset.content || '暂无内容';
+    }
+}
+
+function addNewTag(name, content) {
+    const tagsBar = document.getElementById('tags-bar');
+    const addTagBtn = document.getElementById('add-tag-btn');
+    
+    const newTag = document.createElement('div');
+    newTag.className = 'tag-item';
+    newTag.dataset.content = content;
+    
+    // 标签文本
+    const textSpan = document.createElement('span');
+    textSpan.textContent = name;
+    newTag.appendChild(textSpan);
+
+    // 移除旧的删除按钮逻辑，现在统一使用操作菜单
+    
+    // 插入到添加按钮之前
+    tagsBar.insertBefore(newTag, addTagBtn);
+    
+    // 自动激活新标签
+    handleTagClick(newTag);
+    
+    // 滚动到新标签
+    newTag.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+}
 
 // --- 规则句 (Worldbook) 逻辑 ---
 
