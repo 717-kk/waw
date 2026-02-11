@@ -30,12 +30,11 @@
                             </button>
                         </div>
                     </div>
-                    <div class="tags-bar">
-                        <div class="tag-item active">全部</div>
-                        <div class="tag-item">标签1</div>
-                        <div class="tag-item">标签2</div>
-                        <div class="tag-item">标签3</div>
-                        <div class="tag-item">标签4</div>
+                    <div class="tags-bar" id="tags-bar">
+                        <div class="tag-item active" data-tag="recommend">推荐</div>
+                        <div class="tag-item add-tag-btn" id="add-tag-btn">
+                            + 添加
+                        </div>
                     </div>
                 </div>
                 
@@ -293,6 +292,46 @@
                 <div class="modal-btn-group">
                     <button class="modal-btn btn-cancel" onclick="closeModal('universal-prompt-modal')">取消</button>
                     <button class="modal-btn btn-confirm" id="prompt-modal-ok-btn">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加标签模态框 -->
+    <div class="modal-overlay" id="add-tag-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="add-tag-modal-title">添加新标签</h3>
+                <button class="header-btn" onclick="closeModal('add-tag-modal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>标签名称</label>
+                    <input type="text" id="new-tag-name" placeholder="输入名称...">
+                </div>
+                <div class="form-group">
+                    <label>标签内容</label>
+                    <textarea id="new-tag-content" placeholder="输入该标签下的内容..." style="height: 100px;"></textarea>
+                </div>
+                <div class="modal-btn-group">
+                    <button class="modal-btn btn-cancel" onclick="closeModal('add-tag-modal')">取消</button>
+                    <button class="modal-btn btn-confirm" id="confirm-add-tag-btn">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 标签操作模态框 -->
+    <div class="modal-overlay" id="tag-actions-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>标签操作</h3>
+                <button class="header-btn" onclick="closeModal('tag-actions-modal')"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-btn-group" style="flex-direction: column;">
+                    <button class="modal-btn" id="edit-tag-action-btn" style="background: var(--item-bg); border: 1px solid var(--border-color); margin-bottom: 10px; color: var(--text-color);">编辑标签</button>
+                    <button class="modal-btn btn-danger" id="delete-tag-action-btn">删除标签</button>
                 </div>
             </div>
         </div>
