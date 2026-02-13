@@ -841,7 +841,7 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .messages-header h2 {
-    font-size: 18px;
+    font-size: 19px;
     font-weight: 600;
     color: var(--text-color);
     margin: 0;
@@ -1175,3 +1175,4 @@ input[type="range"]::-webkit-slider-thumb {
     color: var(--secondary-text-color);
     white-space: pre-wrap;
 }
+
