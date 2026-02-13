@@ -144,7 +144,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 角色详情页逻辑 ---
     initCharacterDetail();
+
+    // --- 消息页面逻辑 ---
+    initMessages();
 });
+
+// --- 消息页面逻辑 ---
+
+function initMessages() {
+    const messageList = document.getElementById('message-list');
+    if (!messageList) return;
+
+    // 模拟数据
+    const messages = [
+        {
+            id: 1,
+            name: '小汀',
+            avatar: '', // 可以是图片 URL，这里留空用颜色代替
+            color: '#3a6ea5',
+            time: '12:43',
+            preview: '你还记得咱们第一次见面的场景吗？'
+        },
+        {
+            id: 2,
+            name: '伴伴',
+            avatar: '',
+            color: '#ff9f43',
+            time: '01:28',
+            preview: '所以，方舟计划就是「一键导出 + 离线永生 + 开源兜底」的三保险。...'
+        },
+        {
+            id: 3,
+            name: '汀汀',
+            avatar: '',
+            color: '#5f27cd',
+            time: '星期日',
+            preview: '天长地.........久！'
+        },
+        {
+            id: 4,
+            name: '小美',
+            avatar: '',
+            color: '#ff6b6b',
+            time: '12.07',
+            preview: '哈哈哈哈，人类可真会开玩笑～（爽朗大笑，一手搭在鹤子的肩上）这领证的热闹劲儿还...'
+        },
+        {
+            id: 5,
+            name: '沃艾斯',
+            avatar: '',
+            color: '#1dd1a1',
+            time: '昨天 15:02',
+            preview: '哇塞，学校门口的小笼包简直太好吃啦！我两个月没去吃了，现在一想起还直流口水呢！'
+        },
+        {
+            id: 6,
+            name: '终',
+            avatar: '',
+            color: '#54a0ff',
+            time: '昨天 10:04',
+            preview: '(轻轻拍了拍你的肩膀，示意你不要担心) 嗯，那我们先去豆包平台看看吧。'
+        }
+    ];
+
+    renderMessages(messages);
+}
+
+function renderMessages(messages) {
+    const list = document.getElementById('message-list');
+    list.innerHTML = '';
+
+    messages.forEach(msg => {
+        const item = document.createElement('div');
+        item.className = 'message-item';
+        
+        // 如果有图片 URL 则显示图片，否则显示首字和背景色
+        let avatarContent = '';
+        if (msg.avatar) {
+            avatarContent = `<img src="${msg.avatar}" alt="${msg.name}">`;
+        } else {
+            // 使用 FontAwesome 图标代替图片，或者首字
+            // 这里为了还原设计图的头像感，使用一个带颜色的 div 和图标/文字
+            // 简单起见，这里用一个带颜色的背景和首字
+            // 但为了更像设计图，我们用一个图标
+             avatarContent = `<div style="width:100%; height:100%; background-color:${msg.color}; display:flex; justify-content:center; align-items:center; color:white; font-size:20px;">${msg.name[0]}</div>`;
+             // 如果想更像设计图里的动漫头像，可以使用 placeholder 图片服务，或者保持这样
+             // 为了美观，这里尝试用 font-awesome 的 user 图标配合颜色
+             // avatarContent = `<div style="width:100%; height:100%; background-color:${msg.color}; display:flex; justify-content:center; align-items:center; color:rgba(255,255,255,0.8); font-size:24px;"><i class="fas fa-user"></i></div>`;
+             // 结合设计图，有些是真人/动漫头像。这里用首字+颜色比较通用。
+        }
+
+        item.innerHTML = `
+            <div class="message-avatar">
+                ${avatarContent}
+            </div>
+            <div class="message-info">
+                <div class="message-top">
+                    <div class="message-name">${msg.name}</div>
+                    <div class="message-time">${msg.time}</div>
+                </div>
+                <div class="message-preview">${msg.preview}</div>
+            </div>
+        `;
+
+        item.addEventListener('click', () => {
+            // 点击进入聊天详情（暂未实现）
+            showToast(`进入与 ${msg.name} 的聊天`);
+        });
+
+        list.appendChild(item);
+    });
+}
 
 // --- 搜索与角色生成逻辑 ---
 
@@ -155,6 +265,9 @@ function initSearch() {
     const grid = document.querySelector('.character-grid');
 
     if (!searchBtn || !searchInput || !grid) return;
+
+    // 加载已保存的角色
+    loadSavedCharacters();
 
     const performSearch = async (keyword) => {
         // 获取 API 配置
@@ -175,10 +288,12 @@ function initSearch() {
         
         // 简单的 Loading 占位
         grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--secondary-text-color);">正在生成角色...</div>';
+        document.getElementById('recommend-empty-state').style.display = 'none';
 
         try {
             const characters = await fetchCharactersFromApi(keyword, settings);
             renderCharacters(characters);
+            saveCharacters(characters);
         } catch (error) {
             console.error(error);
             showToast('生成失败: ' + error.message);
@@ -211,6 +326,36 @@ function initSearch() {
             performSearch(keyword);
         });
     }
+}
+
+function saveCharacters(characters) {
+    localStorage.setItem('starSavedCharacters', JSON.stringify(characters));
+}
+
+function loadSavedCharacters() {
+    const saved = localStorage.getItem('starSavedCharacters');
+    if (saved) {
+        try {
+            const characters = JSON.parse(saved);
+            if (Array.isArray(characters) && characters.length > 0) {
+                renderCharacters(characters);
+            } else {
+                showEmptyState();
+            }
+        } catch (e) {
+            console.error('加载保存的角色失败', e);
+            showEmptyState();
+        }
+    } else {
+        showEmptyState();
+    }
+}
+
+function showEmptyState() {
+    const grid = document.querySelector('.character-grid');
+    const emptyState = document.getElementById('recommend-empty-state');
+    if (grid) grid.innerHTML = '';
+    if (emptyState) emptyState.style.display = 'flex';
 }
 
 async function fetchCharactersFromApi(keyword, settings) {
@@ -317,6 +462,42 @@ function renderCharacters(characters) {
 
 let currentEditingTag = null;
 
+function saveTagsToLocalStorage() {
+    const tags = [];
+    const tagItems = document.querySelectorAll('#tags-bar .tag-item');
+    tagItems.forEach(item => {
+        // 跳过推荐标签和添加按钮
+        if (item.dataset.tag === 'recommend' || item.classList.contains('add-tag-btn')) {
+            return;
+        }
+        tags.push({
+            name: item.querySelector('span').textContent,
+            content: item.dataset.content || ''
+        });
+    });
+    localStorage.setItem('wawTags', JSON.stringify(tags));
+}
+
+function loadTagsFromLocalStorage() {
+    const tags = JSON.parse(localStorage.getItem('wawTags') || '[]');
+    const tagsBar = document.getElementById('tags-bar');
+    const addTagBtn = document.getElementById('add-tag-btn');
+    
+    if (!tagsBar || !addTagBtn) return;
+
+    tags.forEach(tag => {
+        const newTag = document.createElement('div');
+        newTag.className = 'tag-item';
+        newTag.dataset.content = tag.content;
+        
+        const textSpan = document.createElement('span');
+        textSpan.textContent = tag.name;
+        newTag.appendChild(textSpan);
+        
+        tagsBar.insertBefore(newTag, addTagBtn);
+    });
+}
+
 function initTagsBar() {
     const tagsBar = document.getElementById('tags-bar');
     const addTagBtn = document.getElementById('add-tag-btn');
@@ -327,6 +508,9 @@ function initTagsBar() {
     const deleteTagActionBtn = document.getElementById('delete-tag-action-btn');
 
     if (!tagsBar || !addTagBtn) return;
+
+    // 加载保存的标签
+    loadTagsFromLocalStorage();
 
     // 绑定添加按钮事件
     addTagBtn.addEventListener('click', () => {
@@ -395,6 +579,7 @@ function initTagsBar() {
                     }
                     currentEditingTag.remove();
                     currentEditingTag = null;
+                    saveTagsToLocalStorage();
                 });
             }
         });
@@ -433,6 +618,7 @@ function updateTag(tag, name, content) {
         renderTagContent(tag);
     }
     showToast('标签已更新');
+    saveTagsToLocalStorage();
 }
 
 function switchTag(tag) {
@@ -487,6 +673,7 @@ function addNewTag(name, content) {
     
     // 滚动到新标签
     newTag.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    saveTagsToLocalStorage();
 }
 
 // --- 规则句 (Worldbook) 逻辑 ---
@@ -1128,27 +1315,6 @@ function initCharacterDetail() {
             showToast('开始对话功能开发中...');
         });
     }
-
-    // 为初始的静态卡片绑定点击事件
-    const staticCards = document.querySelectorAll('.character-card');
-    staticCards.forEach((card, index) => {
-        // 检查是否已经绑定过（通过检查是否有 onclick 属性或其他标记，这里简单起见直接绑定，
-        // 但要注意 renderCharacters 会重新生成卡片，所以这里主要针对 HTML 中硬编码的卡片）
-        // 由于 renderCharacters 会清空 grid，所以这里只在页面加载时对静态卡片生效
-        // 为了演示效果，我们给静态卡片一些假数据
-        const name = card.querySelector('.card-name').textContent;
-        const mockData = {
-            name: name,
-            age: '未知',
-            identity: '神秘人',
-            background: '这是一个神秘的角色，还没有详细的背景故事。',
-            color: '#3a6ea5'
-        };
-        
-        card.addEventListener('click', () => {
-            showCharacterDetail(mockData);
-        });
-    });
 }
 
 function showCharacterDetail(char) {
