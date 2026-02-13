@@ -40,31 +40,11 @@
                 
                 <div class="recommend-content">
                     <div class="character-grid">
-                        <!-- 4个角色卡 -->
-                        <div class="character-card">
-                            <div class="card-image"></div>
-                            <div class="card-info">
-                                <div class="card-name">角色名称 1</div>
-                            </div>
-                        </div>
-                        <div class="character-card">
-                            <div class="card-image"></div>
-                            <div class="card-info">
-                                <div class="card-name">角色名称 2</div>
-                            </div>
-                        </div>
-                        <div class="character-card">
-                            <div class="card-image"></div>
-                            <div class="card-info">
-                                <div class="card-name">角色名称 3</div>
-                            </div>
-                        </div>
-                        <div class="character-card">
-                            <div class="card-image"></div>
-                            <div class="card-info">
-                                <div class="card-name">角色名称 4</div>
-                            </div>
-                        </div>
+                        <!-- 角色卡片将由 JS 动态生成 -->
+                    </div>
+                    <div id="recommend-empty-state" style="display: none; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0; color: var(--secondary-text-color);">
+                        <i class="fas fa-search" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                        <p>输入关键词搜索或点击刷新生成角色</p>
                     </div>
                 </div>
             </div>
@@ -76,7 +56,14 @@
 
             <!-- 消息页面 -->
             <div id="messages" class="page">
-                <div class="placeholder-content">消息页面内容</div>
+                <div class="messages-header">
+                    <h2>聊天</h2>
+                </div>
+                <div class="messages-content">
+                    <div class="message-list" id="message-list">
+                        <!-- 消息列表将由 JS 动态生成 -->
+                    </div>
+                </div>
             </div>
 
             <!-- 我的页面 -->
