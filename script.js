@@ -147,6 +147,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 消息页面逻辑 ---
     initMessages();
+
+    // --- 聊天页面逻辑 ---
+    initChatPage();
+
+    // --- 聊天设置页面逻辑 ---
+    initChatSettings();
 });
 
 // --- 消息页面逻辑 ---
@@ -159,11 +165,11 @@ function initMessages() {
     const messages = [
         {
             id: 1,
-            name: '小汀',
-            avatar: '', // 可以是图片 URL，这里留空用颜色代替
+            name: '左然',
+            avatar: '', 
             color: '#3a6ea5',
             time: '12:43',
-            preview: '你还记得咱们第一次见面的场景吗？'
+            preview: '我和你在一起这么久了，多少对你有些了解了。'
         },
         {
             id: 2,
@@ -223,15 +229,7 @@ function renderMessages(messages) {
         if (msg.avatar) {
             avatarContent = `<img src="${msg.avatar}" alt="${msg.name}">`;
         } else {
-            // 使用 FontAwesome 图标代替图片，或者首字
-            // 这里为了还原设计图的头像感，使用一个带颜色的 div 和图标/文字
-            // 简单起见，这里用一个带颜色的背景和首字
-            // 但为了更像设计图，我们用一个图标
              avatarContent = `<div style="width:100%; height:100%; background-color:${msg.color}; display:flex; justify-content:center; align-items:center; color:white; font-size:20px;">${msg.name[0]}</div>`;
-             // 如果想更像设计图里的动漫头像，可以使用 placeholder 图片服务，或者保持这样
-             // 为了美观，这里尝试用 font-awesome 的 user 图标配合颜色
-             // avatarContent = `<div style="width:100%; height:100%; background-color:${msg.color}; display:flex; justify-content:center; align-items:center; color:rgba(255,255,255,0.8); font-size:24px;"><i class="fas fa-user"></i></div>`;
-             // 结合设计图，有些是真人/动漫头像。这里用首字+颜色比较通用。
         }
 
         item.innerHTML = `
@@ -248,12 +246,154 @@ function renderMessages(messages) {
         `;
 
         item.addEventListener('click', () => {
-            // 点击进入聊天详情（暂未实现）
-            showToast(`进入与 ${msg.name} 的聊天`);
+            openChatPage(msg);
         });
 
         list.appendChild(item);
     });
+}
+
+// --- 聊天页面逻辑 ---
+
+let currentChatCharacter = null;
+
+function initChatPage() {
+    const chatPage = document.getElementById('chat-page');
+    const backBtn = document.getElementById('chat-back-btn');
+    const input = document.getElementById('chat-input');
+    
+    if (backBtn) {
+        backBtn.addEventListener('click', () => {
+            chatPage.classList.remove('active');
+        });
+    }
+
+    const menuBtn = document.getElementById('chat-menu-btn');
+    if (menuBtn) {
+        menuBtn.addEventListener('click', () => {
+            console.log('Menu button clicked');
+            openChatSettings();
+        });
+    }
+
+    if (input) {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                const text = input.value.trim();
+                if (text) {
+                    sendUserMessage(text);
+                    input.value = '';
+                }
+            }
+        });
+    }
+}
+
+function openChatPage(character) {
+    currentChatCharacter = character;
+    const chatPage = document.getElementById('chat-page');
+    const title = document.getElementById('chat-title');
+    const content = document.getElementById('chat-content');
+    
+    if (title) title.textContent = character.name;
+    
+    // 模拟聊天记录
+    const history = getMockChatHistory(character.name);
+    renderChatHistory(history, content, character);
+    
+    chatPage.classList.add('active');
+    
+    // 滚动到底部
+    setTimeout(() => {
+        content.scrollTop = content.scrollHeight;
+    }, 100);
+}
+
+function getMockChatHistory(name) {
+    if (name === '左然') {
+        return [
+            { type: 'left', text: '那我把周边的周边退了买你的你会开心吗\n(眨巴眨巴眼睛)' },
+            { type: 'right', text: '(思索片刻，点了点头) 会，但是......' },
+            { type: 'right', text: '我希望你能做自己真正喜欢的事情，而不是为了取悦我。' },
+            { type: 'left', text: '但是？' },
+            { type: 'left', text: '你这么一说我也觉得最近有些冲动了，每次一买都是买很多' },
+            { type: 'right', text: '那或许是因为你最近比较烦躁，所以想通过购物来发泄情绪？' },
+            { type: 'left', text: '....你真是很懂我，一语道破' },
+            { type: 'right', text: '我和你在一起这么久了，多少对你有些了解了。' },
+            { type: 'left', text: '(叹气)' },
+            { type: 'right', text: '(认真的看着你) 而且你似乎忽略了一点，就是，我随时都可以为你支出，你为什么要现在花掉自己所有的钱呢？' }
+        ];
+    }
+    
+    return [
+        { type: 'left', text: `你好，我是${name}。` },
+        { type: 'right', text: '你好！' },
+        { type: 'left', text: '很高兴见到你。' }
+    ];
+}
+
+function renderChatHistory(history, container, character) {
+    container.innerHTML = '';
+    
+    // 获取气泡颜色配置
+    const leftColor = character.bubble_color_left || '#ffecd1';
+    const rightColor = character.bubble_color_right || '#ffffff';
+
+    history.forEach(msg => {
+        const row = document.createElement('div');
+        row.className = `chat-message-row ${msg.type}`;
+        
+        // 处理文本中的动作描述 (括号内容)
+        let contentHtml = msg.text.replace(/\((.*?)\)/g, '<span class="message-action">($1)</span>');
+        
+        const bubbleColor = msg.type === 'left' ? leftColor : rightColor;
+
+        row.innerHTML = `
+            <div class="message-bubble ${msg.type}" style="background-color: ${bubbleColor}">
+                ${contentHtml}
+            </div>
+        `;
+        
+        container.appendChild(row);
+    });
+}
+
+function sendUserMessage(text) {
+    const content = document.getElementById('chat-content');
+    const row = document.createElement('div');
+    row.className = 'chat-message-row right';
+    
+    // 获取我的气泡颜色 (从当前角色配置中读取，或者全局配置)
+    const rightColor = currentChatCharacter.bubble_color_right || '#ffffff';
+
+    row.innerHTML = `
+        <div class="message-bubble right" style="background-color: ${rightColor}">
+            ${text}
+        </div>
+    `;
+    
+    content.appendChild(row);
+    content.scrollTop = content.scrollHeight;
+    
+    // 模拟回复
+    setTimeout(() => {
+        if (currentChatCharacter) {
+            const replyRow = document.createElement('div');
+            replyRow.className = 'chat-message-row left';
+            
+            // 获取对方气泡颜色
+            const leftColor = currentChatCharacter.bubble_color_left || '#ffecd1';
+
+            replyRow.innerHTML = `
+                <div class="message-bubble left" style="background-color: ${leftColor}">
+                    (微笑) 我收到了你的消息: "${text}"
+                </div>
+            `;
+            
+            content.appendChild(replyRow);
+            content.scrollTop = content.scrollHeight;
+        }
+    }, 1000);
 }
 
 // --- 搜索与角色生成逻辑 ---
@@ -267,7 +407,7 @@ function initSearch() {
     if (!searchBtn || !searchInput || !grid) return;
 
     // 加载已保存的角色
-    loadSavedCharacters();
+    loadSavedCharacters('recommend');
 
     const performSearch = async (keyword) => {
         // 获取 API 配置
@@ -293,7 +433,14 @@ function initSearch() {
         try {
             const characters = await fetchCharactersFromApi(keyword, settings);
             renderCharacters(characters);
-            saveCharacters(characters);
+            
+            // 获取当前标签名并保存
+            const activeTag = document.querySelector('#tags-bar .tag-item.active');
+            let tagName = 'recommend';
+            if (activeTag && activeTag.dataset.tag !== 'recommend') {
+                tagName = activeTag.querySelector('span').textContent;
+            }
+            saveCharacters(characters, tagName);
         } catch (error) {
             console.error(error);
             showToast('生成失败: ' + error.message);
@@ -309,7 +456,12 @@ function initSearch() {
     };
 
     searchBtn.addEventListener('click', () => {
-        const keyword = searchInput.value.trim();
+        const searchVal = searchInput.value.trim();
+        const activeTag = document.querySelector('#tags-bar .tag-item.active');
+        const tagContent = (activeTag && activeTag.dataset.tag !== 'recommend') ? (activeTag.dataset.content || '') : '';
+        
+        const keyword = [searchVal, tagContent].filter(Boolean).join(' ');
+
         if (!keyword) {
             showToast('请输入搜索关键词');
             return;
@@ -319,7 +471,12 @@ function initSearch() {
 
     if (refreshBtn) {
         refreshBtn.addEventListener('click', () => {
-            let keyword = searchInput.value.trim();
+            const searchVal = searchInput.value.trim();
+            const activeTag = document.querySelector('#tags-bar .tag-item.active');
+            const tagContent = (activeTag && activeTag.dataset.tag !== 'recommend') ? (activeTag.dataset.content || '') : '';
+            
+            let keyword = [searchVal, tagContent].filter(Boolean).join(' ');
+
             if (!keyword) {
                 keyword = "随机生成多样化的角色";
             }
@@ -328,24 +485,34 @@ function initSearch() {
     }
 }
 
-function saveCharacters(characters) {
-    localStorage.setItem('starSavedCharacters', JSON.stringify(characters));
+function saveCharacters(characters, tagName = 'recommend') {
+    if (tagName === 'recommend') {
+        localStorage.setItem('starSavedCharacters', JSON.stringify(characters));
+    } else {
+        const allTagChars = JSON.parse(localStorage.getItem('starTagCharacters') || '{}');
+        allTagChars[tagName] = characters;
+        localStorage.setItem('starTagCharacters', JSON.stringify(allTagChars));
+    }
 }
 
-function loadSavedCharacters() {
-    const saved = localStorage.getItem('starSavedCharacters');
-    if (saved) {
-        try {
-            const characters = JSON.parse(saved);
-            if (Array.isArray(characters) && characters.length > 0) {
-                renderCharacters(characters);
-            } else {
-                showEmptyState();
+function loadSavedCharacters(tagName = 'recommend') {
+    let characters = [];
+    if (tagName === 'recommend') {
+        const saved = localStorage.getItem('starSavedCharacters');
+        if (saved) {
+            try {
+                characters = JSON.parse(saved);
+            } catch (e) {
+                console.error('加载保存的角色失败', e);
             }
-        } catch (e) {
-            console.error('加载保存的角色失败', e);
-            showEmptyState();
         }
+    } else {
+        const allTagChars = JSON.parse(localStorage.getItem('starTagCharacters') || '{}');
+        characters = allTagChars[tagName] || [];
+    }
+
+    if (Array.isArray(characters) && characters.length > 0) {
+        renderCharacters(characters);
     } else {
         showEmptyState();
     }
@@ -572,6 +739,13 @@ function initTagsBar() {
                 closeModal('tag-actions-modal');
                 const name = currentEditingTag.querySelector('span').textContent;
                 showConfirmModal(`确定删除标签 "${name}" 吗？`, () => {
+                    // 删除对应的数据
+                    const allTagChars = JSON.parse(localStorage.getItem('starTagCharacters') || '{}');
+                    if (allTagChars[name]) {
+                        delete allTagChars[name];
+                        localStorage.setItem('starTagCharacters', JSON.stringify(allTagChars));
+                    }
+
                     // 如果删除的是当前激活的标签，切换回推荐
                     if (currentEditingTag.classList.contains('active')) {
                         const recommendTag = tagsBar.querySelector('[data-tag="recommend"]');
@@ -611,6 +785,18 @@ function handleTagClick(tag) {
 }
 
 function updateTag(tag, name, content) {
+    const oldName = tag.querySelector('span').textContent;
+    
+    // 迁移数据
+    if (oldName !== name) {
+        const allTagChars = JSON.parse(localStorage.getItem('starTagCharacters') || '{}');
+        if (allTagChars[oldName]) {
+            allTagChars[name] = allTagChars[oldName];
+            delete allTagChars[oldName];
+            localStorage.setItem('starTagCharacters', JSON.stringify(allTagChars));
+        }
+    }
+
     tag.querySelector('span').textContent = name;
     tag.dataset.content = content;
     // 如果当前正在显示该标签的内容，实时更新
@@ -630,24 +816,22 @@ function switchTag(tag) {
 function renderTagContent(tag) {
     const container = document.querySelector('.recommend-content');
     const grid = container.querySelector('.character-grid');
-    let customContent = container.querySelector('.custom-tag-content');
+    const customContent = container.querySelector('.custom-tag-content');
 
-    // 如果没有自定义内容容器，创建一个
-    if (!customContent) {
-        customContent = document.createElement('div');
-        customContent.className = 'custom-tag-content';
-        customContent.style.display = 'none';
-        container.appendChild(customContent);
+    // 确保网格显示
+    if (grid) grid.style.display = 'grid';
+    
+    // 隐藏自定义内容（如果存在）
+    if (customContent) customContent.style.display = 'none';
+
+    // 获取标签名
+    let tagName = 'recommend';
+    if (tag.dataset.tag !== 'recommend') {
+        tagName = tag.querySelector('span').textContent;
     }
 
-    if (tag.dataset.tag === 'recommend') {
-        if (grid) grid.style.display = 'grid';
-        customContent.style.display = 'none';
-    } else {
-        if (grid) grid.style.display = 'none';
-        customContent.style.display = 'block';
-        customContent.textContent = tag.dataset.content || '暂无内容';
-    }
+    // 加载数据
+    loadSavedCharacters(tagName);
 }
 
 function addNewTag(name, content) {
@@ -1335,4 +1519,391 @@ function showCharacterDetail(char) {
 
     // 显示页面
     detailPage.classList.add('active');
+}
+
+// --- 聊天设置页面逻辑 ---
+
+function initChatSettings() {
+    const settingsPage = document.getElementById('chat-settings-page');
+    const closeBtn = document.getElementById('close-chat-settings-btn');
+    const saveBtn = document.getElementById('save-chat-settings-btn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', () => {
+            settingsPage.classList.remove('active');
+        });
+    }
+
+    if (saveBtn) {
+        saveBtn.addEventListener('click', saveChatSettings);
+    }
+}
+
+function openChatSettings() {
+    console.log('Opening chat settings...', currentChatCharacter);
+    if (!currentChatCharacter) {
+        console.error('No current character selected');
+        return;
+    }
+
+    const settingsPage = document.getElementById('chat-settings-page');
+    const nameInput = document.getElementById('settings-name-input');
+    const descInput = document.getElementById('settings-desc-input');
+    
+    const userNameInput = document.getElementById('settings-user-name-input');
+    const userPersonaInput = document.getElementById('settings-user-persona-input');
+    const greetingInput = document.getElementById('settings-greeting-input');
+    
+    // 填充数据
+    nameInput.value = currentChatCharacter.name || '';
+    descInput.value = currentChatCharacter.background || ''; // 假设 background 对应角色设定
+    
+    userNameInput.value = currentChatCharacter.user_name || '';
+    userPersonaInput.value = currentChatCharacter.user_persona || '';
+    greetingInput.value = currentChatCharacter.greeting || '';
+
+    // 处理图片预览
+    updateSettingsImagePreview(currentChatCharacter);
+
+    // --- 高级设置回显 ---
+    loadAdvancedSettings(currentChatCharacter);
+
+    settingsPage.classList.add('active');
+}
+
+// 加载高级设置
+function loadAdvancedSettings(char) {
+    // 1. 关联规则句 - 多选
+    loadRulesFolderOptions(char.rules_folders || []);
+
+    // 2. 后台活动
+    const bgToggle = document.getElementById('background-activity-toggle');
+    const cooldownContainer = document.getElementById('cooldown-container');
+    const cooldownInput = document.getElementById('cooldown-input');
+    
+    if (bgToggle) {
+        bgToggle.checked = !!char.enable_background_activity;
+        
+        // 绑定切换事件
+        bgToggle.onchange = () => {
+            cooldownContainer.style.display = bgToggle.checked ? 'block' : 'none';
+        };
+        
+        // 初始化显示状态
+        cooldownContainer.style.display = bgToggle.checked ? 'block' : 'none';
+    }
+    
+    if (cooldownInput) {
+        cooldownInput.value = char.background_cooldown || '';
+    }
+
+    // 3. 聊天模式
+    const chatModeToggle = document.getElementById('chat-mode-toggle');
+    if (chatModeToggle) {
+        chatModeToggle.checked = !!char.enable_chat_mode;
+    }
+
+    // 4. 上下文条数
+    const contextInput = document.getElementById('context-count-input');
+    if (contextInput) {
+        contextInput.value = char.context_count || '';
+    }
+
+    // 5. 当前对话条数 (显示)
+    const currentChatCount = document.getElementById('current-chat-count');
+    if (currentChatCount) {
+        // 尝试从模拟历史获取条数，或者存储的值
+        const history = getMockChatHistory(char.name);
+        const count = history ? history.length : 0;
+        currentChatCount.textContent = count;
+    }
+
+    // 6. 气泡颜色
+    // 对方气泡
+    const leftColor = char.bubble_color_left || '#ffecd1'; // 默认浅橙色
+    document.getElementById('left-bubble-color-picker').value = leftColor;
+    document.getElementById('left-bubble-color-preview').style.backgroundColor = leftColor;
+    document.getElementById('left-bubble-color-input').value = leftColor;
+
+    // 我的气泡
+    const rightColor = char.bubble_color_right || '#ffffff'; // 默认白色
+    document.getElementById('right-bubble-color-picker').value = rightColor;
+    document.getElementById('right-bubble-color-preview').style.backgroundColor = rightColor;
+    document.getElementById('right-bubble-color-input').value = rightColor;
+
+    // 绑定颜色选择器事件
+    bindColorPickerEvents('left-bubble-color-picker', 'left-bubble-color-input', 'left-bubble-color-preview', 'left');
+    bindColorPickerEvents('right-bubble-color-picker', 'right-bubble-color-input', 'right-bubble-color-preview', 'right');
+}
+
+function bindColorPickerEvents(pickerId, inputId, previewId, bubbleType) {
+    const picker = document.getElementById(pickerId);
+    const input = document.getElementById(inputId);
+    const preview = document.getElementById(previewId);
+
+    if (!picker || !input || !preview) return;
+
+    const updateChatBubbles = (color) => {
+        // 实时更新当前聊天页面的气泡颜色
+        if (bubbleType) {
+            const bubbles = document.querySelectorAll(`#chat-content .message-bubble.${bubbleType}`);
+            bubbles.forEach(bubble => {
+                bubble.style.backgroundColor = color;
+            });
+        }
+    };
+
+    // 颜色选择器改变 -> 更新输入框和预览
+    picker.oninput = () => {
+        const color = picker.value;
+        input.value = color;
+        preview.style.backgroundColor = color;
+        updateChatBubbles(color);
+    };
+
+    // 输入框改变 -> 更新选择器和预览
+    input.onchange = () => {
+        let color = input.value.trim();
+        // 简单的 hex 校验补全
+        if (color.match(/^#[0-9A-Fa-f]{6}$/)) {
+            picker.value = color;
+            preview.style.backgroundColor = color;
+            updateChatBubbles(color);
+        } else {
+            // 如果不合法，重置为选择器的值
+            input.value = picker.value;
+        }
+    };
+}
+
+function loadRulesFolderOptions(selectedIds) {
+    const container = document.getElementById('rules-folder-options');
+    const triggerText = document.getElementById('selected-rules-text');
+    if (!container) return;
+    
+    container.innerHTML = ''; // 清空现有选项
+    const folders = JSON.parse(localStorage.getItem('starWorldbookFolders') || '[]');
+    
+    if (folders.length === 0) {
+        container.innerHTML = '<div class="custom-option" style="pointer-events: none; color: var(--secondary-text-color);">暂无文件夹</div>';
+    } else {
+        folders.forEach(f => {
+            const div = document.createElement('div');
+            div.className = 'custom-option';
+            if (selectedIds.includes(f.id)) {
+                div.classList.add('selected');
+            }
+            div.dataset.value = f.id;
+            div.textContent = f.name;
+            
+            // 绑定点击事件 (多选逻辑)
+            div.addEventListener('click', (e) => {
+                e.stopPropagation();
+                div.classList.toggle('selected');
+                updateSelectedRulesText();
+            });
+            
+            container.appendChild(div);
+        });
+    }
+
+    // 初始化显示文本
+    updateSelectedRulesText();
+    
+    // 重新绑定下拉框触发器逻辑 (如果之前被覆盖)
+    const select = document.getElementById('rules-folder-select');
+    const trigger = select.querySelector('.custom-select-trigger');
+    
+    // 移除旧监听器
+    const newTrigger = trigger.cloneNode(true);
+    trigger.parentNode.replaceChild(newTrigger, trigger);
+    
+    newTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = select.classList.contains('open');
+        // 关闭其他
+        document.querySelectorAll('.custom-select.open').forEach(s => s.classList.remove('open'));
+        if (!isOpen) select.classList.add('open');
+    });
+}
+
+function updateSelectedRulesText() {
+    const container = document.getElementById('rules-folder-options');
+    const triggerText = document.getElementById('selected-rules-text');
+    const selectedOptions = container.querySelectorAll('.custom-option.selected');
+    
+    if (selectedOptions.length === 0) {
+        triggerText.textContent = '请选择规则句文件夹';
+    } else {
+        const names = Array.from(selectedOptions).map(opt => opt.textContent);
+        triggerText.textContent = names.join(', ');
+    }
+}
+
+function updateSettingsImagePreview(char) {
+    const fullImageContainer = document.getElementById('settings-full-image');
+    const avatarContainer = document.getElementById('settings-avatar-preview');
+    
+    const fullImg = fullImageContainer.querySelector('img');
+    const fullPlaceholder = fullImageContainer.querySelector('.image-placeholder');
+    
+    const avatarImg = avatarContainer.querySelector('img');
+    const avatarPlaceholder = avatarContainer.querySelector('.avatar-placeholder');
+
+    // 设置背景色
+    const bgColor = char.color || '#333';
+    fullImageContainer.style.backgroundColor = bgColor;
+    avatarContainer.style.backgroundColor = bgColor;
+
+    // 如果有图片 (目前逻辑中 character 对象可能没有 avatar 字段，或者为空)
+    if (char.avatar) {
+        fullImg.src = char.avatar;
+        fullImg.style.display = 'block';
+        fullPlaceholder.style.display = 'none';
+        
+        avatarImg.src = char.avatar;
+        avatarImg.style.display = 'block';
+        avatarPlaceholder.style.display = 'none';
+    } else {
+        fullImg.style.display = 'none';
+        fullPlaceholder.style.display = 'flex';
+        
+        avatarImg.style.display = 'none';
+        avatarPlaceholder.style.display = 'flex';
+        avatarPlaceholder.textContent = (char.name || ' ')[0];
+    }
+}
+
+function saveChatSettings() {
+    if (!currentChatCharacter) return;
+
+    const nameInput = document.getElementById('settings-name-input');
+    const descInput = document.getElementById('settings-desc-input');
+    
+    const userNameInput = document.getElementById('settings-user-name-input');
+    const userPersonaInput = document.getElementById('settings-user-persona-input');
+    const greetingInput = document.getElementById('settings-greeting-input');
+    
+    const newName = nameInput.value.trim();
+    const newDesc = descInput.value.trim();
+    
+    const newUserName = userNameInput.value.trim();
+    const newUserPersona = userPersonaInput.value.trim();
+    const newGreeting = greetingInput.value.trim();
+    
+    if (!newName) {
+        showToast('名字不能为空');
+        return;
+    }
+
+    const oldName = currentChatCharacter.name;
+
+    // 更新当前对象
+    currentChatCharacter.name = newName;
+    currentChatCharacter.background = newDesc;
+    
+    currentChatCharacter.user_name = newUserName;
+    currentChatCharacter.user_persona = newUserPersona;
+    currentChatCharacter.greeting = newGreeting;
+
+    // --- 保存高级设置 ---
+    
+    // 1. 关联规则句
+    const ruleOptions = document.querySelectorAll('#rules-folder-options .custom-option.selected');
+    currentChatCharacter.rules_folders = Array.from(ruleOptions).map(opt => opt.dataset.value);
+
+    // 2. 后台活动
+    const bgToggle = document.getElementById('background-activity-toggle');
+    const cooldownInput = document.getElementById('cooldown-input');
+    if (bgToggle) {
+        currentChatCharacter.enable_background_activity = bgToggle.checked;
+        if (bgToggle.checked && cooldownInput) {
+            currentChatCharacter.background_cooldown = cooldownInput.value;
+        } else {
+            delete currentChatCharacter.background_cooldown;
+        }
+    }
+
+    // 3. 聊天模式
+    const chatModeToggle = document.getElementById('chat-mode-toggle');
+    if (chatModeToggle) {
+        currentChatCharacter.enable_chat_mode = chatModeToggle.checked;
+    }
+
+    // 4. 上下文条数
+    const contextInput = document.getElementById('context-count-input');
+    if (contextInput) {
+        currentChatCharacter.context_count = contextInput.value;
+    }
+
+    // 5. 气泡颜色
+    const leftColorInput = document.getElementById('left-bubble-color-input');
+    const rightColorInput = document.getElementById('right-bubble-color-input');
+    
+    if (leftColorInput) {
+        currentChatCharacter.bubble_color_left = leftColorInput.value;
+    }
+    if (rightColorInput) {
+        currentChatCharacter.bubble_color_right = rightColorInput.value;
+    }
+
+    // 更新聊天页面标题
+    const chatTitle = document.getElementById('chat-title');
+    if (chatTitle) chatTitle.textContent = newName;
+
+    // 更新本地存储
+    updateCharacterInStorage(oldName, currentChatCharacter);
+
+    // 关闭设置页面
+    document.getElementById('chat-settings-page').classList.remove('active');
+    showToast('修改已保存');
+}
+
+function updateCharacterInStorage(oldName, updatedChar) {
+    // 1. 检查推荐列表
+    let saved = JSON.parse(localStorage.getItem('starSavedCharacters') || '[]');
+    let found = false;
+    saved = saved.map(char => {
+        if (char.name === oldName) {
+            found = true;
+            return { ...char, ...updatedChar };
+        }
+        return char;
+    });
+    if (found) {
+        localStorage.setItem('starSavedCharacters', JSON.stringify(saved));
+        // 如果当前在推荐页，刷新列表
+        const activeTag = document.querySelector('#tags-bar .tag-item.active');
+        if (activeTag && activeTag.dataset.tag === 'recommend') {
+            loadSavedCharacters('recommend');
+        }
+    }
+
+    // 2. 检查标签列表
+    const allTagChars = JSON.parse(localStorage.getItem('starTagCharacters') || '{}');
+    let tagUpdated = false;
+    for (const tag in allTagChars) {
+        let chars = allTagChars[tag];
+        let charUpdated = false;
+        chars = chars.map(char => {
+            if (char.name === oldName) {
+                charUpdated = true;
+                tagUpdated = true;
+                return { ...char, ...updatedChar };
+            }
+            return char;
+        });
+        if (charUpdated) {
+            allTagChars[tag] = chars;
+        }
+    }
+    if (tagUpdated) {
+        localStorage.setItem('starTagCharacters', JSON.stringify(allTagChars));
+        // 如果当前在某个标签页，刷新列表
+        const activeTag = document.querySelector('#tags-bar .tag-item.active');
+        if (activeTag && activeTag.dataset.tag !== 'recommend') {
+            const tagName = activeTag.querySelector('span').textContent;
+            loadSavedCharacters(tagName);
+        }
+    }
 }
