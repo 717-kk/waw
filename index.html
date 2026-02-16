@@ -263,6 +263,224 @@
         </div>
     </div>
 
+    <!-- 聊天页面 -->
+    <div class="sub-page" id="chat-page">
+        <div class="chat-header">
+            <button class="header-btn" id="chat-back-btn">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h2 id="chat-title">角色名</h2>
+            <button class="header-btn" id="chat-menu-btn">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        <div class="chat-content" id="chat-content">
+            <!-- 聊天记录将由 JS 动态生成 -->
+        </div>
+        <div class="chat-footer">
+            <button class="chat-action-btn wa-btn">wa!</button>
+            <div class="chat-input-wrapper">
+                <input type="text" id="chat-input" placeholder="发送消息..." autocomplete="off">
+            </div>
+            <button class="chat-action-btn plus-btn">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- 聊天设置页面 -->
+    <div class="sub-page" id="chat-settings-page">
+        <div class="page-header">
+            <button class="header-btn" id="close-chat-settings-btn">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <h2>设置</h2>
+            <div style="width: 32px;"></div>
+        </div>
+        <div class="page-content">
+            <!-- 完整形象卡片 -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h3>完整形象</h3>
+                </div>
+                <div class="image-preview-area">
+                    <div class="full-image-preview" id="settings-full-image">
+                        <img src="" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                        <div class="image-placeholder"><i class="fas fa-image"></i></div>
+                    </div>
+                    <div class="avatar-preview-area">
+                        <div class="avatar-circle-preview" id="settings-avatar-preview">
+                            <img src="" style="display: none; width: 100%; height: 100%; object-fit: cover;">
+                            <div class="avatar-placeholder">头</div>
+                        </div>
+                        <button class="secondary-btn" id="crop-avatar-btn">重新裁剪</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 角色设定卡片 -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h3>角色设定</h3>
+                </div>
+                <div class="form-group">
+                    <label>名字</label>
+                    <input type="text" id="settings-name-input" placeholder="输入名字...">
+                </div>
+                <div class="form-group">
+                    <label>角色设定</label>
+                    <textarea id="settings-desc-input" placeholder="输入角色设定..." style="height: 150px;"></textarea>
+                </div>
+            </div>
+
+            <!-- 我的设定卡片 -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h3>我的设定</h3>
+                </div>
+                <div class="form-group">
+                    <label>名字</label>
+                    <input type="text" id="settings-user-name-input" placeholder="输入名字...">
+                </div>
+                <div class="form-group">
+                    <label>我的设定</label>
+                    <textarea id="settings-user-persona-input" placeholder="输入我的设定..." style="height: 150px;"></textarea>
+                </div>
+            </div>
+
+            <!-- 开场白卡片 -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h3>开场白</h3>
+                </div>
+                <div class="form-group">
+                    <textarea id="settings-greeting-input" placeholder="输入开场白..." style="height: 100px;"></textarea>
+                </div>
+            </div>
+
+            <!-- 高级设置卡片 -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h3>高级设置</h3>
+                </div>
+                
+                <!-- 1. 关联规则句 -->
+                <div class="setting-item">
+                    <label>关联规则句</label>
+                    <div class="custom-select-wrapper">
+                        <div class="custom-select multi-select" id="rules-folder-select">
+                            <div class="custom-select-trigger">
+                                <span id="selected-rules-text">请选择规则句文件夹</span>
+                                <i class="fas fa-chevron-down arrow"></i>
+                            </div>
+                            <div class="custom-options" id="rules-folder-options">
+                                <!-- 选项动态生成 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="setting-divider"></div>
+
+                <!-- 2. 开启后台活动 -->
+                <div class="setting-item-row">
+                    <div class="setting-label">开启后台活动</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="background-activity-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+                
+                <div id="cooldown-container" style="display: none;">
+                    <div class="setting-item-row">
+                        <div class="setting-label" style="font-size: 14px; color: var(--secondary-text-color);">选择冷却时间</div>
+                        <div class="input-with-suffix">
+                            <input type="number" id="cooldown-input" class="transparent-input" placeholder="0">
+                            <span class="suffix">h</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="setting-divider"></div>
+
+                <!-- 3. 开启聊天模式 -->
+                <div class="setting-item-row">
+                    <div class="setting-label">开启聊天模式</div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="chat-mode-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="setting-divider"></div>
+
+                <!-- 4. 读取上下文条数 -->
+                <div class="setting-item-row">
+                    <div class="setting-label">读取上下文条数</div>
+                    <input type="number" id="context-count-input" class="transparent-input" placeholder="0">
+                </div>
+
+                <div class="setting-divider"></div>
+
+                <!-- 5. 当前对话条数 -->
+                <div class="setting-item-row">
+                    <div class="setting-label">当前对话条数</div>
+                    <span id="current-chat-count" class="info-text">0</span>
+                </div>
+            </div>
+
+            <!-- 气泡颜色卡片 -->
+            <div class="settings-card">
+                <div class="settings-card-header">
+                    <h3>气泡颜色</h3>
+                </div>
+                
+                <!-- 对方气泡 -->
+                <div class="setting-item-row">
+                    <div class="setting-label">对方气泡</div>
+                    <div class="color-setting-wrapper">
+                        <div class="color-circle-container">
+                            <input type="color" id="left-bubble-color-picker">
+                            <div class="color-circle" id="left-bubble-color-preview"></div>
+                        </div>
+                        <input type="text" id="left-bubble-color-input" class="color-code-input" placeholder="#FFFFFF">
+                    </div>
+                </div>
+
+                <div class="setting-divider"></div>
+
+                <!-- 我的气泡 -->
+                <div class="setting-item-row">
+                    <div class="setting-label">我的气泡</div>
+                    <div class="color-setting-wrapper">
+                        <div class="color-circle-container">
+                            <input type="color" id="right-bubble-color-picker">
+                            <div class="color-circle" id="right-bubble-color-preview"></div>
+                        </div>
+                        <input type="text" id="right-bubble-color-input" class="color-code-input" placeholder="#FFFFFF">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 聊天记录导入导出卡片 -->
+            <div class="settings-card">
+                <div class="setting-action-item" id="export-chat-history">
+                    <div class="setting-label">导出聊天记录</div>
+                    <i class="fas fa-chevron-right" style="color: var(--secondary-text-color); font-size: 14px;"></i>
+                </div>
+                
+                <div class="setting-divider"></div>
+
+                <div class="setting-action-item" id="import-chat-history">
+                    <div class="setting-label">导入聊天记录</div>
+                    <i class="fas fa-chevron-right" style="color: var(--secondary-text-color); font-size: 14px;"></i>
+                </div>
+            </div>
+
+            <button id="save-chat-settings-btn" class="save-btn confirm-btn">确认修改</button>
+        </div>
+    </div>
+
     <!-- 模态框组件 -->
     
     <!-- 新建文件夹模态框 -->
