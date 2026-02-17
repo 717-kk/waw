@@ -1182,8 +1182,10 @@ input[type="range"]::-webkit-slider-thumb {
 #chat-page {
     background-color: #2c2c2c; /* 默认背景 */
     background-image: linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'); /* 示例背景图，实际可替换 */
-    background-size: cover;
-    background-position: center;
+    background-size: cover; /* 确保覆盖全屏 */
+    background-repeat: no-repeat;
+    background-position: center center; /* 居中显示 */
+    background-attachment: fixed; /* 固定背景，实现视差效果 */
     display: none;
     flex-direction: column;
     padding: 0;
@@ -1207,33 +1209,39 @@ input[type="range"]::-webkit-slider-thumb {
     color: #fff;
 }
 
+/* 在 header 底部添加一个向下的渐变阴影伪元素，模拟柔和边界 */
+.chat-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 15px; /* 阴影高度 */
+    background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
 .chat-header::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    /* 高度计算：100vh - 底部导航栏(60px) - 底部安全区域 */
-    height: calc(100vh - 60px - env(safe-area-inset-bottom));
+    height: 100%; /* 填满头部即可 */
     
-    /* 组合背景：顶部渐变阴影 + 页面遮罩渐变 + 壁纸 */
+    /* 组合背景：必须与 #chat-page 完全一致 */
     background-image: 
-        linear-gradient(to bottom, rgba(0,0,0,0.4), transparent),
         linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3)), 
         url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80');
     background-size: cover;
-    background-position: center top;
+    background-position: center center; /* 与 #chat-page 保持一致 */
+    background-attachment: fixed; /* 关键：固定背景以对齐 */
     z-index: -1;
     pointer-events: none;
 }
 
-@media (min-width: 768px) {
-    /* 桌面端修复聊天头部背景高度 */
-    .chat-header::before {
-        /* 桌面端固定高度：812px - 60px */
-        height: calc(812px - 60px);
-    }
-}
+/* 移除桌面端的高度修复，因为使用了 fixed attachment */
 
 .chat-header h2 {
     font-size: 18px;
@@ -1277,10 +1285,10 @@ input[type="range"]::-webkit-slider-thumb {
 }
 
 .message-bubble {
-    max-width: 80%; /* 稍微加宽 */
+    max-width: 90%; /* 稍微加宽 */
     padding: 10px 14px;
-    border-radius: 10px; /* 统一圆角 */
-    font-size: 15px;
+    border-radius: 12px; /* 统一圆角 */
+    font-size: 14px;
     line-height: 1.5;
     position: relative;
     word-wrap: break-word;
@@ -1374,13 +1382,14 @@ input[type="range"]::-webkit-slider-thumb {
 body.light-mode #chat-page {
     /* 叠加浅色遮罩，使背景变亮 */
     background-image: linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.1)), url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80');
+    background-position: center center;
 }
 
 body.light-mode .chat-header::before {
     background-image: 
-        linear-gradient(to bottom, rgba(0,0,0,0.4), transparent),
         linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.1)), 
         url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80');
+    background-position: center center;
 }
 
 body.light-mode .chat-footer {
@@ -1437,12 +1446,13 @@ body.light-mode .chat-action-btn:hover {
 
 .image-preview-area {
     display: flex;
-    gap: 20px;
+    gap: 12px;
+    height: 240px;
 }
 
 .full-image-preview {
-    flex: 1;
-    aspect-ratio: 2/3;
+    flex: 4;
+    height: 100%;
     background-color: #333;
     border-radius: 12px;
     overflow: hidden;
@@ -1450,6 +1460,12 @@ body.light-mode .chat-action-btn:hover {
     display: flex;
     justify-content: center;
     align-items: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.full-image-preview:active {
+    opacity: 0.8;
 }
 
 .full-image-preview img {
@@ -1464,24 +1480,41 @@ body.light-mode .chat-action-btn:hover {
 }
 
 .avatar-preview-area {
-    width: 100px;
+    flex: 5;
+    height: 100%;
+    background-color: #333;
+    border-radius: 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 15px;
+    gap: 20px;
 }
 
 .avatar-circle-preview {
-    width: 80px;
-    height: 80px;
+    width: 110px;
+    height: 110px;
     border-radius: 50%;
-    background-color: #333;
+    background-color: #444;
     overflow: hidden;
     border: 2px solid var(--border-color);
     display: flex;
     justify-content: center;
     align-items: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.avatar-edit-text {
+    font-size: 14px;
+    color: var(--secondary-text-color);
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 8px 24px;
+    border-radius: 20px;
+}
+
+.avatar-circle-preview:active {
+    opacity: 0.8;
 }
 
 .avatar-circle-preview img {
