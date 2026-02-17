@@ -297,6 +297,15 @@ function openChatPage(character) {
     
     if (title) title.textContent = character.name;
     
+    // 应用背景图
+    if (character.background_image) {
+        applyChatBackground(character.background_image);
+    } else {
+        // 恢复默认背景
+        const defaultBg = 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80';
+        applyChatBackground(defaultBg);
+    }
+    
     // 模拟聊天记录
     const history = getMockChatHistory(character.name);
     renderChatHistory(history, content, character);
@@ -1537,6 +1546,132 @@ function initChatSettings() {
     if (saveBtn) {
         saveBtn.addEventListener('click', saveChatSettings);
     }
+
+    // 壁纸上传逻辑
+    const fullImagePreview = document.getElementById('settings-full-image');
+    const bgUploadInput = document.getElementById('settings-bg-upload');
+    
+    if (fullImagePreview && bgUploadInput) {
+        fullImagePreview.addEventListener('click', () => {
+            bgUploadInput.click();
+        });
+
+        bgUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const result = e.target.result;
+                    // 更新预览
+                    const img = fullImagePreview.querySelector('img');
+                    const placeholder = fullImagePreview.querySelector('.image-placeholder');
+                    img.src = result;
+                    img.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    
+                    // 实时更新当前聊天背景
+                    applyChatBackground(result);
+                    
+                    // 更新数据对象
+                    if (currentChatCharacter) {
+                        currentChatCharacter.background_image = result;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // 头像上传逻辑
+    const avatarPreview = document.getElementById('settings-avatar-preview');
+    const avatarUploadInput = document.getElementById('settings-avatar-upload');
+
+    const triggerAvatarUpload = () => avatarUploadInput.click();
+
+    if (avatarPreview && avatarUploadInput) {
+        avatarPreview.addEventListener('click', triggerAvatarUpload);
+
+        avatarUploadInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const result = e.target.result;
+                    // 更新预览
+                    const img = avatarPreview.querySelector('img');
+                    const placeholder = avatarPreview.querySelector('.avatar-placeholder');
+                    img.src = result;
+                    img.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    
+                    // 更新数据对象
+                    if (currentChatCharacter) {
+                        currentChatCharacter.avatar = result;
+                        
+                        // 如果当前是消息列表中的角色，尝试更新列表头像
+                        updateMessageListAvatar(currentChatCharacter.name, result);
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+}
+
+function applyChatBackground(imageUrl) {
+    const chatPage = document.getElementById('chat-page');
+    // 保持遮罩渐变
+    const gradient = 'linear-gradient(rgba(0,0,0,0.3), rgba(0,0,0,0.3))';
+    const lightGradient = 'linear-gradient(rgba(255,255,255,0.1), rgba(255,255,255,0.1))';
+    
+    // 更新 #chat-page
+    chatPage.style.backgroundImage = `${gradient}, url('${imageUrl}')`;
+    
+    // 更新 .chat-header::before (通过 style 标签)
+    let styleTag = document.getElementById('dynamic-chat-bg');
+    if (!styleTag) {
+        styleTag = document.createElement('style');
+        styleTag.id = 'dynamic-chat-bg';
+        document.head.appendChild(styleTag);
+    }
+    
+    styleTag.innerHTML = `
+        #chat-page {
+            background-image: ${gradient}, url('${imageUrl}') !important;
+            background-attachment: fixed !important;
+            background-position: center center !important;
+            background-size: cover !important;
+        }
+        .chat-header::before {
+            background-image: ${gradient}, url('${imageUrl}') !important;
+            background-attachment: fixed !important;
+            background-position: center center !important;
+            background-size: cover !important;
+        }
+        body.light-mode #chat-page {
+            background-image: ${lightGradient}, url('${imageUrl}') !important;
+            background-attachment: fixed !important;
+            background-position: center center !important;
+            background-size: cover !important;
+        }
+        body.light-mode .chat-header::before {
+            background-image: ${lightGradient}, url('${imageUrl}') !important;
+            background-attachment: fixed !important;
+            background-position: center center !important;
+            background-size: cover !important;
+        }
+    `;
+}
+
+function updateMessageListAvatar(name, avatarUrl) {
+    const messageItems = document.querySelectorAll('.message-item');
+    messageItems.forEach(item => {
+        const nameEl = item.querySelector('.message-name');
+        if (nameEl && nameEl.textContent === name) {
+            const avatarContainer = item.querySelector('.message-avatar');
+            avatarContainer.innerHTML = `<img src="${avatarUrl}" alt="${name}">`;
+        }
+    });
 }
 
 function openChatSettings() {
@@ -1755,19 +1890,23 @@ function updateSettingsImagePreview(char) {
     fullImageContainer.style.backgroundColor = bgColor;
     avatarContainer.style.backgroundColor = bgColor;
 
-    // 如果有图片 (目前逻辑中 character 对象可能没有 avatar 字段，或者为空)
-    if (char.avatar) {
-        fullImg.src = char.avatar;
+    // 1. 处理壁纸 (full image)
+    // 优先使用 background_image，其次尝试 avatar (如果没有专属壁纸)，最后显示占位
+    if (char.background_image) {
+        fullImg.src = char.background_image;
         fullImg.style.display = 'block';
         fullPlaceholder.style.display = 'none';
-        
+    } else {
+        fullImg.style.display = 'none';
+        fullPlaceholder.style.display = 'flex';
+    }
+
+    // 2. 处理头像
+    if (char.avatar) {
         avatarImg.src = char.avatar;
         avatarImg.style.display = 'block';
         avatarPlaceholder.style.display = 'none';
     } else {
-        fullImg.style.display = 'none';
-        fullPlaceholder.style.display = 'flex';
-        
         avatarImg.style.display = 'none';
         avatarPlaceholder.style.display = 'flex';
         avatarPlaceholder.textContent = (char.name || ' ')[0];
