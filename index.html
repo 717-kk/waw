@@ -278,13 +278,32 @@
             <!-- 聊天记录将由 JS 动态生成 -->
         </div>
         <div class="chat-footer">
-            <button class="chat-action-btn wa-btn">wa!</button>
-            <div class="chat-input-wrapper">
-                <input type="text" id="chat-input" placeholder="发送消息..." autocomplete="off">
+            <div class="chat-input-area">
+                <button class="chat-action-btn wa-btn">wa!</button>
+                <div class="chat-input-wrapper">
+                    <input type="text" id="chat-input" placeholder="发送消息..." autocomplete="off">
+                </div>
+                <button class="chat-action-btn plus-btn" id="chat-plus-btn">
+                    <i class="fas fa-plus"></i>
+                </button>
             </div>
-            <button class="chat-action-btn plus-btn">
-                <i class="fas fa-plus"></i>
-            </button>
+            <div class="chat-toolbar" id="chat-toolbar">
+                <div class="toolbar-item" id="toolbar-summary">
+                    <div class="toolbar-icon"><i class="fas fa-magic"></i></div>
+                    <div class="toolbar-text">总结</div>
+                </div>
+                <div class="toolbar-item" id="toolbar-favorite">
+                    <div class="toolbar-icon"><i class="fas fa-star"></i></div>
+                    <div class="toolbar-text">收藏</div>
+                </div>
+                <div class="toolbar-item" id="toolbar-clear">
+                    <div class="toolbar-icon"><i class="fas fa-trash-alt"></i></div>
+                    <div class="toolbar-text">清空</div>
+                </div>
+                <div class="toolbar-item placeholder">
+                    <!-- 占位符 -->
+                </div>
+            </div>
         </div>
     </div>
 
@@ -466,6 +485,13 @@
 
             <!-- 聊天记录导入导出卡片 -->
             <div class="settings-card">
+                <div class="setting-action-item" id="search-chat-history">
+                    <div class="setting-label">查找聊天记录</div>
+                    <i class="fas fa-chevron-right" style="color: var(--secondary-text-color); font-size: 14px;"></i>
+                </div>
+                
+                <div class="setting-divider"></div>
+
                 <div class="setting-action-item" id="export-chat-history">
                     <div class="setting-label">导出聊天记录</div>
                     <i class="fas fa-chevron-right" style="color: var(--secondary-text-color); font-size: 14px;"></i>
