@@ -838,7 +838,6 @@ input[type="range"]::-webkit-slider-thumb {
     position: sticky;
     top: 0;
     z-index: 100;
-    /* 确保标题栏下方没有边框干扰，如果需要可以加 border-bottom */
 }
 
 .messages-header h2 {
@@ -851,6 +850,7 @@ input[type="range"]::-webkit-slider-thumb {
 .messages-content {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden; /* 防止横向滚动 */
     /* 隐藏滚动条 */
     scrollbar-width: none;
 }
@@ -859,23 +859,63 @@ input[type="range"]::-webkit-slider-thumb {
 .message-list {
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
 
-.message-item {
+/* 消息项容器，用于包含内容和操作按钮 */
+.message-item-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden; /* 隐藏溢出的操作按钮 */
+    background-color: var(--bg-color); /* 确保背景色遮挡下层 */
+}
+
+/* 消息内容区域，可滑动 */
+.message-item-content {
     display: flex;
     padding: 15px 20px;
     cursor: pointer;
-    transition: background-color 0.2s;
+    background-color: var(--bg-color);
     position: relative;
+    z-index: 2; /* 确保在操作按钮之上 */
+    transition: transform 0.2s ease-out; /* 平滑回弹 */
+    width: 100%;
+    box-sizing: border-box; /* 确保 padding 不增加宽度 */
 }
 
-.message-item:active {
+.message-item-content:active {
     background-color: var(--item-hover);
 }
 
-/* 分隔线 - 已移除 */
-.message-item::after {
-    display: none;
+/* 操作按钮区域 */
+.message-item-actions {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    display: flex;
+    z-index: 1; /* 在内容之下 */
+}
+
+.message-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 70px;
+    height: 100%;
+    border: none;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.btn-pin {
+    background-color: #3a6ea5; /* 蓝色 */
+}
+
+.btn-delete {
+    background-color: #ff3b30; /* 红色 */
 }
 
 .message-avatar {
@@ -886,6 +926,7 @@ input[type="range"]::-webkit-slider-thumb {
     margin-right: 15px;
     flex-shrink: 0;
     background-color: #333;
+    pointer-events: none; /* 防止图片干扰触摸事件 */
 }
 
 .message-avatar img {
@@ -900,6 +941,7 @@ input[type="range"]::-webkit-slider-thumb {
     flex-direction: column;
     justify-content: center;
     overflow: hidden; /* 确保文本溢出省略生效 */
+    pointer-events: none; /* 防止文本干扰触摸事件 */
 }
 
 .message-top {
@@ -927,6 +969,24 @@ input[type="range"]::-webkit-slider-thumb {
     overflow: hidden;
     text-overflow: ellipsis;
     line-height: 1.4;
+}
+
+/* 置顶样式 */
+.message-item-container.pinned .message-item-content {
+    background-color: rgba(58, 110, 165, 0.1); /* 淡淡的蓝色背景表示置顶 */
+}
+.message-item-container.pinned .message-item-content:active {
+    background-color: rgba(58, 110, 165, 0.2);
+}
+.message-item-container.pinned::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background-color: #3a6ea5;
+    z-index: 3;
 }
 
 /* --- 推荐页面样式 --- */
@@ -1216,8 +1276,8 @@ input[type="range"]::-webkit-slider-thumb {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 15px; /* 阴影高度 */
-    background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.1) 100%);
+    height: 1px;
+    background: rgba(255, 255, 255, 0.15);
     pointer-events: none;
     z-index: 1;
 }
@@ -1271,7 +1331,7 @@ input[type="range"]::-webkit-slider-thumb {
 .chat-message-row {
     display: flex;
     align-items: flex-start;
-    margin-bottom: -4px; /* 增加间距 */
+    margin-bottom: -6px; /* 增加间距 */
     padding: 0 -2px; /* 增加左右内边距 */
 }
 
@@ -1309,6 +1369,80 @@ input[type="range"]::-webkit-slider-thumb {
     margin-left: auto; /* 靠右 */
 }
 
+/* 最新消息工具栏 (嵌入在气泡内) */
+.latest-msg-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.latest-msg-toolbar .toolbar-left,
+.latest-msg-toolbar .toolbar-right {
+    display: flex;
+    gap: 15px;
+}
+
+.latest-msg-toolbar i {
+    font-size: 14px;
+    color: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    padding: 4px;
+}
+
+.latest-msg-toolbar i:hover {
+    color: rgba(0, 0, 0, 0.8);
+}
+
+/* 历史消息点击弹出的工具栏 (Context Menu) */
+.msg-context-menu {
+    position: fixed;
+    z-index: 2000;
+    background-color: rgba(40, 40, 40, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 10px 15px;
+    display: flex;
+    gap: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.2s ease-out;
+}
+
+.msg-context-menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    color: #fff;
+    cursor: pointer;
+    min-width: 32px;
+}
+
+.msg-context-menu-item i {
+    font-size: 20px;
+    margin-bottom: 2px;
+}
+
+.msg-context-menu-item span {
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.msg-context-menu::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid rgba(40, 40, 40, 0.95);
+}
+
 /* 动作/旁白样式 (括号内的内容) */
 .message-action {
     color: #666;
@@ -1327,9 +1461,66 @@ input[type="range"]::-webkit-slider-thumb {
     background-color: rgba(62, 64, 63, 0.9); /* 深色半透明背景 */
     backdrop-filter: blur(10px);
     display: flex;
+    flex-direction: column;
+    gap: 0;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.3s ease;
+}
+
+.chat-input-area {
+    display: flex;
     align-items: center;
     gap: 10px;
-    border-top: 1px solid rgba(255,255,255,0.1);
+    width: 100%;
+}
+
+.chat-toolbar {
+    display: none; /* JS控制显示 */
+    grid-template-columns: repeat(4, 1fr);
+    width: 100%;
+    padding-top: 20px;
+    padding-bottom: 5px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.chat-toolbar.active {
+    display: grid;
+}
+
+.toolbar-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: var(--secondary-text-color);
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.toolbar-item:active {
+    color: var(--text-color);
+    transform: scale(0.95);
+}
+
+.toolbar-item .toolbar-icon {
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.toolbar-item .toolbar-text {
+    font-size: 12px;
+}
+
+/* Light mode adaptation for toolbar */
+body.light-mode .toolbar-item .toolbar-icon {
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .chat-action-btn {
@@ -1511,6 +1702,22 @@ body.light-mode .chat-action-btn:hover {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 8px 24px;
     border-radius: 20px;
+}
+
+/* Light Mode Adaptations for Image Settings */
+body.light-mode .full-image-preview,
+body.light-mode .avatar-preview-area {
+    background-color: #f0f0f0;
+}
+
+body.light-mode .avatar-circle-preview {
+    background-color: #e0e0e0;
+    border-color: #ccc;
+}
+
+body.light-mode .avatar-edit-text {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--text-color);
 }
 
 .avatar-circle-preview:active {
