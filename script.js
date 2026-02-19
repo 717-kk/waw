@@ -150,6 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 聊天页面逻辑 ---
     initChatPage();
+    initChatToolbar();
 
     // --- 聊天设置页面逻辑 ---
     initChatSettings();
@@ -157,72 +158,83 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- 消息页面逻辑 ---
 
+// 全局变量存储消息列表数据，以便操作
+let chatMessagesData = [
+    {
+        id: 1,
+        name: '左然',
+        avatar: '', 
+        color: '#3a6ea5',
+        time: '12:43',
+        preview: '我和你在一起这么久了，多少对你有些了解了。',
+        pinned: false
+    },
+    {
+        id: 2,
+        name: '伴伴',
+        avatar: '',
+        color: '#ff9f43',
+        time: '01:28',
+        preview: '所以，方舟计划就是「一键导出 + 离线永生 + 开源兜底」的三保险。...',
+        pinned: false
+    },
+    {
+        id: 3,
+        name: '汀汀',
+        avatar: '',
+        color: '#5f27cd',
+        time: '星期日',
+        preview: '天长地.........久！',
+        pinned: false
+    },
+    {
+        id: 4,
+        name: '小美',
+        avatar: '',
+        color: '#ff6b6b',
+        time: '12.07',
+        preview: '哈哈哈哈，人类可真会开玩笑～（爽朗大笑，一手搭在鹤子的肩上）这领证的热闹劲儿还...',
+        pinned: false
+    },
+    {
+        id: 5,
+        name: '沃艾斯',
+        avatar: '',
+        color: '#1dd1a1',
+        time: '昨天 15:02',
+        preview: '哇塞，学校门口的小笼包简直太好吃啦！我两个月没去吃了，现在一想起还直流口水呢！',
+        pinned: false
+    },
+    {
+        id: 6,
+        name: '终',
+        avatar: '',
+        color: '#54a0ff',
+        time: '昨天 10:04',
+        preview: '(轻轻拍了拍你的肩膀，示意你不要担心) 嗯，那我们先去豆包平台看看吧。',
+        pinned: false
+    }
+];
+
 function initMessages() {
     const messageList = document.getElementById('message-list');
     if (!messageList) return;
-
-    // 模拟数据
-    const messages = [
-        {
-            id: 1,
-            name: '左然',
-            avatar: '', 
-            color: '#3a6ea5',
-            time: '12:43',
-            preview: '我和你在一起这么久了，多少对你有些了解了。'
-        },
-        {
-            id: 2,
-            name: '伴伴',
-            avatar: '',
-            color: '#ff9f43',
-            time: '01:28',
-            preview: '所以，方舟计划就是「一键导出 + 离线永生 + 开源兜底」的三保险。...'
-        },
-        {
-            id: 3,
-            name: '汀汀',
-            avatar: '',
-            color: '#5f27cd',
-            time: '星期日',
-            preview: '天长地.........久！'
-        },
-        {
-            id: 4,
-            name: '小美',
-            avatar: '',
-            color: '#ff6b6b',
-            time: '12.07',
-            preview: '哈哈哈哈，人类可真会开玩笑～（爽朗大笑，一手搭在鹤子的肩上）这领证的热闹劲儿还...'
-        },
-        {
-            id: 5,
-            name: '沃艾斯',
-            avatar: '',
-            color: '#1dd1a1',
-            time: '昨天 15:02',
-            preview: '哇塞，学校门口的小笼包简直太好吃啦！我两个月没去吃了，现在一想起还直流口水呢！'
-        },
-        {
-            id: 6,
-            name: '终',
-            avatar: '',
-            color: '#54a0ff',
-            time: '昨天 10:04',
-            preview: '(轻轻拍了拍你的肩膀，示意你不要担心) 嗯，那我们先去豆包平台看看吧。'
-        }
-    ];
-
-    renderMessages(messages);
+    renderMessages(chatMessagesData);
 }
+
+// 记录当前打开的滑块
+let currentOpenSwipeItem = null;
 
 function renderMessages(messages) {
     const list = document.getElementById('message-list');
     list.innerHTML = '';
 
-    messages.forEach(msg => {
-        const item = document.createElement('div');
-        item.className = 'message-item';
+    messages.forEach((msg, index) => {
+        const container = document.createElement('div');
+        container.className = 'message-item-container';
+        if (msg.pinned) {
+            container.classList.add('pinned');
+        }
         
         // 如果有图片 URL 则显示图片，否则显示首字和背景色
         let avatarContent = '';
@@ -232,24 +244,155 @@ function renderMessages(messages) {
              avatarContent = `<div style="width:100%; height:100%; background-color:${msg.color}; display:flex; justify-content:center; align-items:center; color:white; font-size:20px;">${msg.name[0]}</div>`;
         }
 
-        item.innerHTML = `
-            <div class="message-avatar">
-                ${avatarContent}
+        container.innerHTML = `
+            <div class="message-item-actions">
+                <button class="message-action-btn btn-pin">${msg.pinned ? '取消置顶' : '置顶'}</button>
+                <button class="message-action-btn btn-delete">删除</button>
             </div>
-            <div class="message-info">
-                <div class="message-top">
-                    <div class="message-name">${msg.name}</div>
-                    <div class="message-time">${msg.time}</div>
+            <div class="message-item-content">
+                <div class="message-avatar">
+                    ${avatarContent}
                 </div>
-                <div class="message-preview">${msg.preview}</div>
+                <div class="message-info">
+                    <div class="message-top">
+                        <div class="message-name">${msg.name}</div>
+                        <div class="message-time">${msg.time}</div>
+                    </div>
+                    <div class="message-preview">${msg.preview}</div>
+                </div>
             </div>
         `;
 
-        item.addEventListener('click', () => {
+        // 绑定事件
+        const contentDiv = container.querySelector('.message-item-content');
+        const pinBtn = container.querySelector('.btn-pin');
+        const deleteBtn = container.querySelector('.btn-delete');
+
+        // 滑动逻辑变量
+        let startX = 0;
+        let startY = 0;
+        let currentTranslate = 0;
+        let isDragging = false;
+        let isVertical = false; // 判断是否垂直滚动
+        const maxSwipe = -140; // 两个按钮宽度 (70 * 2)
+
+        contentDiv.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+            startY = e.touches[0].clientY;
+            contentDiv.style.transition = 'none'; // 移除过渡以便实时跟随
+            isVertical = false;
+            
+            // 如果点击的不是当前已打开的项，且有其他项打开，则关闭其他项
+            if (currentOpenSwipeItem && currentOpenSwipeItem !== contentDiv) {
+                currentOpenSwipeItem.style.transition = 'transform 0.2s ease-out';
+                currentOpenSwipeItem.style.transform = 'translateX(0)';
+                currentOpenSwipeItem = null;
+            }
+        }, { passive: true });
+
+        contentDiv.addEventListener('touchmove', (e) => {
+            if (isVertical) return; // 如果判定为垂直滚动，则忽略水平滑动
+
+            const currentX = e.touches[0].clientX;
+            const currentY = e.touches[0].clientY;
+            const diffX = currentX - startX;
+            const diffY = currentY - startY;
+
+            // 首次判断方向
+            if (!isDragging && Math.abs(diffY) > Math.abs(diffX)) {
+                isVertical = true;
+                return;
+            }
+
+            isDragging = true;
+            
+            // 只能向左滑 (diffX < 0) 或从打开状态向右滑回
+            // 限制滑动范围
+            let translate = diffX;
+            
+            // 如果是从打开状态开始滑 (假设暂不支持，每次都从0开始算逻辑简单点，或者维护状态)
+            // 这里简化：每次 touchstart 都是从当前 visual state 开始
+            // 但因为 transform 是 style，touchstart 时我们可以读取它？
+            // 简单实现：只支持从 0 向左滑
+            
+            if (translate > 0) translate = 0;
+            if (translate < maxSwipe - 50) translate = maxSwipe - 50; // 阻尼效果
+
+            contentDiv.style.transform = `translateX(${translate}px)`;
+        }, { passive: false });
+
+        contentDiv.addEventListener('touchend', (e) => {
+            contentDiv.style.transition = 'transform 0.2s ease-out';
+            isDragging = false;
+
+            // 获取当前的 transform 值 (近似)
+            const style = window.getComputedStyle(contentDiv);
+            const matrix = new WebKitCSSMatrix(style.transform);
+            const currentX = matrix.m41;
+
+            if (currentX < -50) {
+                // 展开
+                contentDiv.style.transform = `translateX(${maxSwipe}px)`;
+                currentOpenSwipeItem = contentDiv;
+            } else {
+                // 收起
+                contentDiv.style.transform = 'translateX(0)';
+                if (currentOpenSwipeItem === contentDiv) {
+                    currentOpenSwipeItem = null;
+                }
+            }
+        });
+
+        // 点击事件：如果是展开状态则收起，否则进入聊天
+        contentDiv.addEventListener('click', (e) => {
+            // 如果刚刚发生了拖动，或者处于展开状态，则不进入聊天，而是收起
+            if (currentOpenSwipeItem === contentDiv) {
+                contentDiv.style.transition = 'transform 0.2s ease-out';
+                contentDiv.style.transform = 'translateX(0)';
+                currentOpenSwipeItem = null;
+                return;
+            }
             openChatPage(msg);
         });
 
-        list.appendChild(item);
+        // 置顶逻辑
+        pinBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // 收起滑块
+            contentDiv.style.transform = 'translateX(0)';
+            currentOpenSwipeItem = null;
+
+            // 修改数据
+            msg.pinned = !msg.pinned;
+            
+            // 重新排序：置顶的在最前
+            chatMessagesData.sort((a, b) => {
+                if (a.pinned === b.pinned) return 0; // 保持原有相对顺序（不稳定排序可能变，但暂且这样）
+                return a.pinned ? -1 : 1;
+            });
+            
+            // 重新渲染
+            renderMessages(chatMessagesData);
+        });
+
+        // 删除逻辑
+        deleteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            showConfirmModal(`确定删除与 ${msg.name} 的对话吗？`, () => {
+                // 从数组中移除
+                const idx = chatMessagesData.findIndex(m => m.id === msg.id);
+                if (idx !== -1) {
+                    chatMessagesData.splice(idx, 1);
+                    renderMessages(chatMessagesData);
+                    showToast('已删除');
+                }
+            });
+            // 恢复滑块状态 (虽然元素会被删除重绘)
+            contentDiv.style.transform = 'translateX(0)';
+            currentOpenSwipeItem = null;
+        });
+
+        list.appendChild(container);
     });
 }
 
@@ -265,6 +408,16 @@ function initChatPage() {
     if (backBtn) {
         backBtn.addEventListener('click', () => {
             chatPage.classList.remove('active');
+            
+            // 退出时重置工具栏状态
+            const toolbar = document.getElementById('chat-toolbar');
+            const chatContent = document.getElementById('chat-content');
+            if (toolbar) {
+                toolbar.classList.remove('active');
+            }
+            if (chatContent) {
+                chatContent.style.paddingBottom = '80px';
+            }
         });
     }
 
@@ -287,6 +440,215 @@ function initChatPage() {
             }
         });
     }
+
+    // 绑定 "wa!" 按钮事件
+    const waBtn = document.querySelector('.wa-btn');
+    if (waBtn) {
+        waBtn.addEventListener('click', () => {
+            if (!currentChatCharacter) {
+                showToast('请先选择一个角色');
+                return;
+            }
+            triggerAiReply();
+        });
+    }
+
+    // --- 消息气泡点击事件 (Context Menu) ---
+    const chatContent = document.getElementById('chat-content');
+    
+    // 全局点击关闭 Context Menu
+    document.addEventListener('click', (e) => {
+        // 如果点击的不是 menu 内部
+        if (!e.target.closest('.msg-context-menu')) {
+            const existing = document.querySelector('.msg-context-menu');
+            if (existing) existing.remove();
+        }
+    });
+
+    if (chatContent) {
+        chatContent.addEventListener('click', (e) => {
+            // 查找是否点击了气泡 (且不是工具栏按钮)
+            const bubble = e.target.closest('.message-bubble');
+            const isToolbar = e.target.closest('.latest-msg-toolbar');
+            
+            if (bubble && !isToolbar) {
+                e.stopPropagation(); // 阻止冒泡，避免触发 document 的关闭逻辑
+                
+                // 移除已存在的菜单
+                const existing = document.querySelector('.msg-context-menu');
+                if (existing) existing.remove();
+
+                showContextMenu(bubble);
+            }
+        });
+    }
+}
+
+function showContextMenu(bubble) {
+    const menu = document.createElement('div');
+    menu.className = 'msg-context-menu';
+    menu.innerHTML = `
+        <div class="msg-context-menu-item" id="ctx-copy">
+            <i class="far fa-copy"></i>
+            <span>复制</span>
+        </div>
+        <div class="msg-context-menu-item" id="ctx-modify">
+            <i class="fas fa-pen"></i>
+            <span>修改</span>
+        </div>
+        <div class="msg-context-menu-item" id="ctx-fav">
+            <i class="far fa-heart"></i>
+            <span>收藏</span>
+        </div>
+         <div class="msg-context-menu-item" id="ctx-undo">
+            <i class="fas fa-undo"></i>
+            <span>回溯</span>
+        </div>
+    `;
+
+    // 绑定事件
+    menu.querySelector('#ctx-copy').addEventListener('click', () => {
+        // 克隆节点以去除工具栏等杂质
+        const clone = bubble.cloneNode(true);
+        const toolbar = clone.querySelector('.latest-msg-toolbar');
+        if (toolbar) toolbar.remove();
+        
+        const text = clone.innerText.trim();
+        navigator.clipboard.writeText(text).then(() => {
+            showToast('已复制');
+        }).catch(() => {
+            showToast('复制失败');
+        });
+        menu.remove();
+    });
+
+    menu.querySelector('#ctx-modify').addEventListener('click', () => {
+        showToast('修改功能');
+        menu.remove();
+    });
+
+    menu.querySelector('#ctx-fav').addEventListener('click', () => {
+        showToast('已收藏');
+        menu.remove();
+    });
+
+    menu.querySelector('#ctx-undo').addEventListener('click', () => {
+        showToast('回溯功能');
+        menu.remove();
+    });
+
+    document.body.appendChild(menu);
+
+    // 计算位置
+    const rect = bubble.getBoundingClientRect();
+    const menuRect = menu.getBoundingClientRect();
+    
+    // 默认显示在气泡上方
+    let top = rect.top - menuRect.height - 10;
+    let left = rect.left + (rect.width / 2) - (menuRect.width / 2);
+
+    // 边界检查
+    if (top < 10) top = rect.bottom + 10; // 如果上方不够，显示在下方
+    if (left < 10) left = 10;
+    if (left + menuRect.width > window.innerWidth - 10) {
+        left = window.innerWidth - menuRect.width - 10;
+    }
+
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
+}
+
+// --- 最新消息工具栏逻辑 ---
+
+function addLatestMessageToolbar(bubble) {
+    // 避免重复添加
+    if (bubble.querySelector('.latest-msg-toolbar')) return;
+
+    const toolbar = document.createElement('div');
+    toolbar.className = 'latest-msg-toolbar';
+    toolbar.innerHTML = `
+        <div class="toolbar-left">
+            <i class="fas fa-pen" title="修改"></i>
+        </div>
+        <div class="toolbar-right">
+            <i class="fas fa-chevron-up" title="选择"></i>
+            <i class="fas fa-redo" title="重回"></i>
+        </div>
+    `;
+
+    // 绑定事件 (防止冒泡触发 Context Menu)
+    toolbar.addEventListener('click', (e) => {
+        e.stopPropagation();
+    });
+
+    toolbar.querySelector('.fa-pen').addEventListener('click', () => showToast('修改功能'));
+    toolbar.querySelector('.fa-chevron-up').addEventListener('click', () => showToast('选择功能'));
+    toolbar.querySelector('.fa-redo').addEventListener('click', () => showToast('重回功能'));
+
+    bubble.appendChild(toolbar);
+}
+
+function removeAllToolbars() {
+    const toolbars = document.querySelectorAll('.latest-msg-toolbar');
+    toolbars.forEach(t => t.remove());
+}
+
+function initChatToolbar() {
+    const plusBtn = document.getElementById('chat-plus-btn');
+    const toolbar = document.getElementById('chat-toolbar');
+    const chatContent = document.getElementById('chat-content');
+    
+    if (!plusBtn || !toolbar) return;
+
+    // 切换工具栏显示
+    plusBtn.addEventListener('click', () => {
+        const isActive = toolbar.classList.contains('active');
+        if (isActive) {
+            toolbar.classList.remove('active');
+            // 恢复 padding
+            if (chatContent) chatContent.style.paddingBottom = '80px';
+        } else {
+            toolbar.classList.add('active');
+            // 增加 padding 以防止遮挡 (简单估算高度)
+            if (chatContent) chatContent.style.paddingBottom = '160px';
+            // 滚动到底部
+            setTimeout(() => {
+                chatContent.scrollTop = chatContent.scrollHeight;
+            }, 100);
+        }
+    });
+
+    // 绑定工具栏按钮事件
+    const summaryBtn = document.getElementById('toolbar-summary');
+    const favoriteBtn = document.getElementById('toolbar-favorite');
+    const clearBtn = document.getElementById('toolbar-clear');
+
+    if (summaryBtn) {
+        summaryBtn.addEventListener('click', () => {
+            showToast('正在生成总结...');
+            setTimeout(() => {
+                showToast('总结功能开发中');
+            }, 1000);
+        });
+    }
+
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', () => {
+            showToast('已收藏当前对话');
+        });
+    }
+
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            showConfirmModal('确定清空当前聊天记录吗？', () => {
+                if (chatContent) {
+                    chatContent.innerHTML = '';
+                    // 如果需要，也可以清空 currentChatCharacter 中的历史记录标志
+                }
+                showToast('已清空');
+            });
+        });
+    }
 }
 
 function openChatPage(character) {
@@ -307,7 +669,7 @@ function openChatPage(character) {
     }
     
     // 模拟聊天记录
-    const history = getMockChatHistory(character.name);
+    const history = getMockChatHistory(character);
     renderChatHistory(history, content, character);
     
     chatPage.classList.add('active');
@@ -318,9 +680,11 @@ function openChatPage(character) {
     }, 100);
 }
 
-function getMockChatHistory(name) {
-    if (name === '左然') {
-        return [
+function getMockChatHistory(character) {
+    let history = [];
+
+    if (character.name === '左然') {
+        history = [
             { type: 'left', text: '那我把周边的周边退了买你的你会开心吗\n(眨巴眨巴眼睛)' },
             { type: 'right', text: '(思索片刻，点了点头) 会，但是......' },
             { type: 'right', text: '我希望你能做自己真正喜欢的事情，而不是为了取悦我。' },
@@ -332,13 +696,20 @@ function getMockChatHistory(name) {
             { type: 'left', text: '(叹气)' },
             { type: 'right', text: '(认真的看着你) 而且你似乎忽略了一点，就是，我随时都可以为你支出，你为什么要现在花掉自己所有的钱呢？' }
         ];
+    } else {
+        history = [
+            { type: 'left', text: `你好，我是${character.name}。` },
+            { type: 'right', text: '你好！' },
+            { type: 'left', text: '很高兴见到你。' }
+        ];
     }
-    
-    return [
-        { type: 'left', text: `你好，我是${name}。` },
-        { type: 'right', text: '你好！' },
-        { type: 'left', text: '很高兴见到你。' }
-    ];
+
+    // 检查是否有自定义开场白设置，如果有，则插入到第一条
+    if (character.greeting && character.greeting.trim()) {
+        history.unshift({ type: 'left', text: character.greeting, isGreeting: true });
+    }
+
+    return history;
 }
 
 function renderChatHistory(history, container, character) {
@@ -351,6 +722,9 @@ function renderChatHistory(history, container, character) {
     history.forEach(msg => {
         const row = document.createElement('div');
         row.className = `chat-message-row ${msg.type}`;
+        if (msg.isGreeting) {
+            row.classList.add('is-greeting');
+        }
         
         // 处理文本中的动作描述 (括号内容)
         let contentHtml = msg.text.replace(/\((.*?)\)/g, '<span class="message-action">($1)</span>');
@@ -365,9 +739,19 @@ function renderChatHistory(history, container, character) {
         
         container.appendChild(row);
     });
+
+    // 渲染完成后，检查最后一条消息是否是对方发的，如果是，添加工具栏
+    const lastRow = container.lastElementChild;
+    if (lastRow && lastRow.classList.contains('left')) {
+        const bubble = lastRow.querySelector('.message-bubble');
+        addLatestMessageToolbar(bubble);
+    }
 }
 
 function sendUserMessage(text) {
+    // 用户发送消息时，移除所有现有的“最新消息工具栏”
+    removeAllToolbars();
+
     const content = document.getElementById('chat-content');
     const row = document.createElement('div');
     row.className = 'chat-message-row right';
@@ -383,26 +767,6 @@ function sendUserMessage(text) {
     
     content.appendChild(row);
     content.scrollTop = content.scrollHeight;
-    
-    // 模拟回复
-    setTimeout(() => {
-        if (currentChatCharacter) {
-            const replyRow = document.createElement('div');
-            replyRow.className = 'chat-message-row left';
-            
-            // 获取对方气泡颜色
-            const leftColor = currentChatCharacter.bubble_color_left || '#ffecd1';
-
-            replyRow.innerHTML = `
-                <div class="message-bubble left" style="background-color: ${leftColor}">
-                    (微笑) 我收到了你的消息: "${text}"
-                </div>
-            `;
-            
-            content.appendChild(replyRow);
-            content.scrollTop = content.scrollHeight;
-        }
-    }, 1000);
 }
 
 // --- 搜索与角色生成逻辑 ---
@@ -1747,10 +2111,9 @@ function loadAdvancedSettings(char) {
     // 5. 当前对话条数 (显示)
     const currentChatCount = document.getElementById('current-chat-count');
     if (currentChatCount) {
-        // 尝试从模拟历史获取条数，或者存储的值
-        const history = getMockChatHistory(char.name);
-        const count = history ? history.length : 0;
-        currentChatCount.textContent = count;
+        // 实时获取 DOM 中的消息数量
+        const rows = document.querySelectorAll('#chat-content .chat-message-row');
+        currentChatCount.textContent = rows.length;
     }
 
     // 6. 气泡颜色
@@ -1993,8 +2356,51 @@ function saveChatSettings() {
     // 更新本地存储
     updateCharacterInStorage(oldName, currentChatCharacter);
 
-    // 关闭设置页面
-    document.getElementById('chat-settings-page').classList.remove('active');
+    // --- 实时更新聊天界面 (开场白) ---
+    const chatContent = document.getElementById('chat-content');
+    if (chatContent) {
+        const existingGreetingRow = chatContent.querySelector('.chat-message-row.is-greeting');
+        const leftColor = currentChatCharacter.bubble_color_left || '#ffecd1';
+        
+        if (newGreeting) {
+            // 处理文本格式
+            let contentHtml = newGreeting.replace(/\((.*?)\)/g, '<span class="message-action">($1)</span>');
+            contentHtml = contentHtml.replace(/\n/g, '<br>');
+
+            if (existingGreetingRow) {
+                // 更新现有
+                const bubble = existingGreetingRow.querySelector('.message-bubble');
+                if (bubble) {
+                    bubble.innerHTML = contentHtml;
+                    bubble.style.backgroundColor = leftColor;
+                }
+            } else {
+                // 新增
+                const row = document.createElement('div');
+                row.className = 'chat-message-row left is-greeting';
+                row.innerHTML = `
+                    <div class="message-bubble left" style="background-color: ${leftColor}">
+                        ${contentHtml}
+                    </div>
+                `;
+                chatContent.insertBefore(row, chatContent.firstChild);
+            }
+        } else {
+            // 如果清空了开场白，移除现有 DOM
+            if (existingGreetingRow) {
+                existingGreetingRow.remove();
+            }
+        }
+    }
+
+    // --- 实时更新对话条数 ---
+    const currentChatCount = document.getElementById('current-chat-count');
+    if (currentChatCount && chatContent) {
+        currentChatCount.textContent = chatContent.querySelectorAll('.chat-message-row').length;
+    }
+
+    // 不自动关闭设置页面
+    // document.getElementById('chat-settings-page').classList.remove('active');
     showToast('修改已保存');
 }
 
@@ -2045,4 +2451,197 @@ function updateCharacterInStorage(oldName, updatedChar) {
             loadSavedCharacters(tagName);
         }
     }
+}
+
+// --- API 对话逻辑 (新增) ---
+
+async function triggerAiReply() {
+    const waBtn = document.querySelector('.wa-btn');
+    if (waBtn.disabled) return;
+
+    // 获取配置
+    const settings = JSON.parse(localStorage.getItem('starSettings') || '{}');
+    if (!settings.apiUrl || !settings.apiKey) {
+        showToast('请先配置 API');
+        return;
+    }
+
+    // UI Loading
+    const originalContent = waBtn.innerHTML;
+    waBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    waBtn.disabled = true;
+
+    try {
+        await chatWithAi(settings);
+    } catch (error) {
+        console.error(error);
+        showToast('回复失败: ' + error.message);
+    } finally {
+        waBtn.innerHTML = originalContent;
+        waBtn.disabled = false;
+    }
+}
+
+async function chatWithAi(settings) {
+    if (!currentChatCharacter) throw new Error("未选择角色");
+
+    // 1. 构建 System Prompt
+    const systemPrompt = buildSystemPrompt(currentChatCharacter);
+
+    // 2. 获取上下文条数配置
+    // 如果未设置或为 0，默认取 10 条？或者全部？用户说“依照设置中的读取上下文条数”
+    let contextLimit = parseInt(currentChatCharacter.context_count);
+    if (isNaN(contextLimit)) contextLimit = 10; // 默认值
+
+    // 3. 构建历史消息
+    const history = getChatHistoryContext(contextLimit);
+
+    // 4. 组合消息
+    const messages = [
+        { role: "system", content: systemPrompt },
+        ...history
+    ];
+
+    console.log("Sending to API:", messages);
+
+    // 5. 发送请求
+    let apiUrl = settings.apiUrl.replace(/\/$/, '');
+    if (!apiUrl.includes('/chat/completions')) {
+        if (apiUrl.endsWith('/v1')) {
+            apiUrl += '/chat/completions';
+        } else {
+            apiUrl += '/v1/chat/completions';
+        }
+    }
+
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${settings.apiKey}`
+        },
+        body: JSON.stringify({
+            model: settings.model || 'gpt-3.5-turbo',
+            messages: messages,
+            temperature: parseFloat(settings.temperature) || 0.7
+        })
+    });
+
+    if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || data.content || '';
+
+    if (!content) throw new Error("Empty response");
+
+    // 6. 上屏
+    appendAssistantMessage(content);
+}
+
+function buildSystemPrompt(char) {
+    let prompt = `你扮演的角色是：${char.name}。\n`;
+    if (char.background) {
+        prompt += `角色设定：${char.background}\n`;
+    }
+    
+    if (char.user_name) {
+        prompt += `正在与你对话的用户是：${char.user_name}。\n`;
+    }
+    
+    if (char.user_persona) {
+        prompt += `用户设定：${char.user_persona}\n`;
+    }
+
+    // --- 规则句处理 ---
+    if (char.rules_folders && Array.isArray(char.rules_folders) && char.rules_folders.length > 0) {
+        const allItems = JSON.parse(localStorage.getItem('starWorldbookItems') || '[]');
+        // 筛选出属于关联文件夹的条目
+        const relevantItems = allItems.filter(item => char.rules_folders.includes(item.folderId));
+        
+        if (relevantItems.length > 0) {
+            prompt += `\n【规则书/世界观/补充设定】：\n`;
+            relevantItems.forEach(item => {
+                // 简单的格式化，可以根据需要调整
+                prompt += `### ${item.title}\n${item.content}\n\n`;
+            });
+        }
+    }
+
+    prompt += `请沉浸在角色中进行对话。`;
+    return prompt;
+}
+
+function getChatHistoryContext(limit) {
+    const chatContent = document.getElementById('chat-content');
+    if (!chatContent) return [];
+
+    // 获取所有消息行
+    const rows = Array.from(chatContent.querySelectorAll('.chat-message-row'));
+    
+    // 截取最近的 N 条
+    // 注意：limit 如果是 0，应该代表“不限制”还是“0条”？通常用户设置为 0 可能意味着“无限”或者“只看当前”。
+    // 根据常理，如果用户设置了上下文条数，就是希望带上历史。如果没设(undefined/null)，给个默认值。
+    // 如果用户显式设为 0，那可能就是不想带历史（只靠 system prompt 和当前输入，但当前输入已经上屏变成历史了...）
+    // 假设 0 或负数 = 全部历史（或者我们可以定一个最大上限如 50 以防 token 溢出）
+    
+    let targetRows = rows;
+    if (limit > 0) {
+        targetRows = rows.slice(-limit);
+    }
+
+    const messages = [];
+
+    targetRows.forEach(row => {
+        const bubble = row.querySelector('.message-bubble');
+        if (!bubble) return;
+
+        // 简单判断角色：right -> user, left -> assistant
+        const role = row.classList.contains('right') ? 'user' : 'assistant';
+        
+        // 提取文本，移除可能的 HTML 标签（如 <span class="action">）
+        // 这里简单使用 innerText，但要注意是否保留换行
+        let text = bubble.innerText.trim();
+        
+        // 如果是 assistant，移除开头的 "(微笑) " 这种硬编码的前缀（如果是模拟数据的话）
+        // 真实 API 返回的内容不需要移除，但之前的 getMockChatHistory 里的数据可能包含动作
+        // 我们的渲染逻辑是将 (动作) 变成了 span，innerText 会保留它们，这是对的。
+
+        if (text) {
+            messages.push({ role, content: text });
+        }
+    });
+
+    return messages;
+}
+
+function appendAssistantMessage(text) {
+    // AI 回复时，先清除旧的工具栏 (理论上可能存在)
+    removeAllToolbars();
+
+    const content = document.getElementById('chat-content');
+    const row = document.createElement('div');
+    row.className = 'chat-message-row left';
+    
+    const leftColor = currentChatCharacter?.bubble_color_left || '#ffecd1';
+
+    // 处理动作描述
+    let contentHtml = text.replace(/\((.*?)\)/g, '<span class="message-action">($1)</span>');
+    // 处理换行
+    contentHtml = contentHtml.replace(/\n/g, '<br>');
+
+    row.innerHTML = `
+        <div class="message-bubble left" style="background-color: ${leftColor}">
+            ${contentHtml}
+        </div>
+    `;
+    
+    content.appendChild(row);
+    
+    // 为最新的 AI 回复添加工具栏
+    const bubble = row.querySelector('.message-bubble');
+    addLatestMessageToolbar(bubble);
+
+    content.scrollTop = content.scrollHeight;
 }
