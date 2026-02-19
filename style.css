@@ -1405,7 +1405,7 @@ input[type="range"]::-webkit-slider-thumb {
     border-radius: 12px;
     padding: 10px 15px;
     display: flex;
-    gap: 10px;
+    gap: 6px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     animation: fadeIn 0.2s ease-out;
 }
@@ -1994,3 +1994,4 @@ input:checked + .slider:before {
 .setting-action-item .setting-label {
     flex: 1;
 }
+
