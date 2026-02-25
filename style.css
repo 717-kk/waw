@@ -736,6 +736,56 @@ textarea { resize: none; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 .toast.fade-out { opacity: 0; transition: opacity 0.3s; }
 
+/* --- 图库页面样式 --- */
+.gallery-upload-section {
+    margin-bottom: 20px;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 10px;
+    padding: 10px 0;
+}
+
+.gallery-item {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    background-color: var(--item-bg);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.gallery-item-delete {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.gallery-item-delete:hover {
+    background: var(--danger-color);
+}
+
 /* --- API 设置样式 --- */
 
 /* 模型输入组 */
@@ -862,60 +912,72 @@ input[type="range"]::-webkit-slider-thumb {
     overflow-x: hidden;
 }
 
-/* 消息项容器，用于包含内容和操作按钮 */
+/* 消息项容器 */
 .message-item-container {
     position: relative;
     width: 100%;
-    overflow: hidden; /* 隐藏溢出的操作按钮 */
-    background-color: var(--bg-color); /* 确保背景色遮挡下层 */
+    background-color: var(--bg-color);
 }
 
-/* 消息内容区域，可滑动 */
+/* 消息内容区域 */
 .message-item-content {
     display: flex;
     padding: 15px 20px;
     cursor: pointer;
     background-color: var(--bg-color);
-    position: relative;
-    z-index: 2; /* 确保在操作按钮之上 */
-    transition: transform 0.2s ease-out; /* 平滑回弹 */
     width: 100%;
-    box-sizing: border-box; /* 确保 padding 不增加宽度 */
+    box-sizing: border-box;
+    transition: background-color 0.2s;
 }
 
 .message-item-content:active {
     background-color: var(--item-hover);
 }
 
-/* 操作按钮区域 */
-.message-item-actions {
-    position: absolute;
-    top: 0;
-    right: 0;
-    height: 100%;
+/* 消息列表长按菜单 */
+.msg-list-context-menu {
+    position: fixed;
+    z-index: 2000;
+    background-color: rgba(40, 40, 40, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    padding: 0;
     display: flex;
-    z-index: 1; /* 在内容之下 */
+    flex-direction: column;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    animation: fadeIn 0.2s ease-out;
+    min-width: 100px;
+    overflow: hidden;
 }
 
-.message-action-btn {
+.msg-list-menu-item {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 70px;
-    height: 100%;
-    border: none;
-    color: white;
-    font-size: 14px;
-    font-weight: 500;
+    padding: 12px 0;
+    color: #fff;
     cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+    width: 100%;
 }
 
-.btn-pin {
-    background-color: #3a6ea5; /* 蓝色 */
+.msg-list-menu-item:active {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-.btn-delete {
-    background-color: #ff3b30; /* 红色 */
+.msg-list-menu-item span {
+    white-space: nowrap;
+}
+
+.msg-list-menu-item.delete {
+    color: #ff6b6b;
+}
+
+.msg-list-divider {
+    height: 1px;
+    background-color: rgba(255, 255, 255, 0.1);
+    width: 100%;
 }
 
 .message-avatar {
@@ -1400,7 +1462,7 @@ input[type="range"]::-webkit-slider-thumb {
 .msg-context-menu {
     position: fixed;
     z-index: 2000;
-    background-color: rgba(40, 40, 40, 0.95);
+    background-color: rgba(64, 63, 68);
     backdrop-filter: blur(10px);
     border-radius: 12px;
     padding: 10px 15px;
@@ -1994,5 +2056,3 @@ input:checked + .slider:before {
 .setting-action-item .setting-label {
     flex: 1;
 }
-
-
