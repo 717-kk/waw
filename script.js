@@ -154,12 +154,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- 聊天设置页面逻辑 ---
     initChatSettings();
+
+    // --- 图库页面逻辑 ---
+    initGallery();
 });
 
 // --- 消息页面逻辑 ---
 
 // 全局变量存储消息列表数据，以便操作
-let chatMessagesData = [
+const defaultChatMessagesData = [
     {
         id: 1,
         name: '左然',
@@ -216,14 +219,17 @@ let chatMessagesData = [
     }
 ];
 
+let chatMessagesData = JSON.parse(localStorage.getItem('starChatMessages')) || defaultChatMessagesData;
+
+function saveChatMessagesData() {
+    localStorage.setItem('starChatMessages', JSON.stringify(chatMessagesData));
+}
+
 function initMessages() {
     const messageList = document.getElementById('message-list');
     if (!messageList) return;
     renderMessages(chatMessagesData);
 }
-
-// 记录当前打开的滑块
-let currentOpenSwipeItem = null;
 
 function renderMessages(messages) {
     const list = document.getElementById('message-list');
@@ -245,10 +251,6 @@ function renderMessages(messages) {
         }
 
         container.innerHTML = `
-            <div class="message-item-actions">
-                <button class="message-action-btn btn-pin">${msg.pinned ? '取消置顶' : '置顶'}</button>
-                <button class="message-action-btn btn-delete">删除</button>
-            </div>
             <div class="message-item-content">
                 <div class="message-avatar">
                     ${avatarContent}
@@ -263,137 +265,155 @@ function renderMessages(messages) {
             </div>
         `;
 
-        // 绑定事件
         const contentDiv = container.querySelector('.message-item-content');
-        const pinBtn = container.querySelector('.btn-pin');
-        const deleteBtn = container.querySelector('.btn-delete');
+        
+        // --- 长按逻辑 ---
+        let longPressTimer;
+        const longPressDuration = 500;
+        let isLongPress = false;
+        let startX, startY;
 
-        // 滑动逻辑变量
-        let startX = 0;
-        let startY = 0;
-        let currentTranslate = 0;
-        let isDragging = false;
-        let isVertical = false; // 判断是否垂直滚动
-        const maxSwipe = -140; // 两个按钮宽度 (70 * 2)
-
-        contentDiv.addEventListener('touchstart', (e) => {
-            startX = e.touches[0].clientX;
-            startY = e.touches[0].clientY;
-            contentDiv.style.transition = 'none'; // 移除过渡以便实时跟随
-            isVertical = false;
+        const startHandler = (e) => {
+            // 如果是多点触控，忽略
+            if (e.touches && e.touches.length > 1) return;
             
-            // 如果点击的不是当前已打开的项，且有其他项打开，则关闭其他项
-            if (currentOpenSwipeItem && currentOpenSwipeItem !== contentDiv) {
-                currentOpenSwipeItem.style.transition = 'transform 0.2s ease-out';
-                currentOpenSwipeItem.style.transform = 'translateX(0)';
-                currentOpenSwipeItem = null;
-            }
-        }, { passive: true });
-
-        contentDiv.addEventListener('touchmove', (e) => {
-            if (isVertical) return; // 如果判定为垂直滚动，则忽略水平滑动
-
-            const currentX = e.touches[0].clientX;
-            const currentY = e.touches[0].clientY;
-            const diffX = currentX - startX;
-            const diffY = currentY - startY;
-
-            // 首次判断方向
-            if (!isDragging && Math.abs(diffY) > Math.abs(diffX)) {
-                isVertical = true;
-                return;
-            }
-
-            isDragging = true;
+            isLongPress = false;
             
-            // 只能向左滑 (diffX < 0) 或从打开状态向右滑回
-            // 限制滑动范围
-            let translate = diffX;
-            
-            // 如果是从打开状态开始滑 (假设暂不支持，每次都从0开始算逻辑简单点，或者维护状态)
-            // 这里简化：每次 touchstart 都是从当前 visual state 开始
-            // 但因为 transform 是 style，touchstart 时我们可以读取它？
-            // 简单实现：只支持从 0 向左滑
-            
-            if (translate > 0) translate = 0;
-            if (translate < maxSwipe - 50) translate = maxSwipe - 50; // 阻尼效果
-
-            contentDiv.style.transform = `translateX(${translate}px)`;
-        }, { passive: false });
-
-        contentDiv.addEventListener('touchend', (e) => {
-            contentDiv.style.transition = 'transform 0.2s ease-out';
-            isDragging = false;
-
-            // 获取当前的 transform 值 (近似)
-            const style = window.getComputedStyle(contentDiv);
-            const matrix = new WebKitCSSMatrix(style.transform);
-            const currentX = matrix.m41;
-
-            if (currentX < -50) {
-                // 展开
-                contentDiv.style.transform = `translateX(${maxSwipe}px)`;
-                currentOpenSwipeItem = contentDiv;
+            if (e.touches) {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
             } else {
-                // 收起
-                contentDiv.style.transform = 'translateX(0)';
-                if (currentOpenSwipeItem === contentDiv) {
-                    currentOpenSwipeItem = null;
-                }
+                startX = e.clientX;
+                startY = e.clientY;
             }
-        });
 
-        // 点击事件：如果是展开状态则收起，否则进入聊天
+            longPressTimer = setTimeout(() => {
+                isLongPress = true;
+                showMessageListContextMenu(msg, startX, startY);
+            }, longPressDuration);
+        };
+
+        const moveHandler = (e) => {
+            let currentX, currentY;
+            if (e.touches) {
+                currentX = e.touches[0].clientX;
+                currentY = e.touches[0].clientY;
+            } else {
+                currentX = e.clientX;
+                currentY = e.clientY;
+            }
+            
+            // 如果移动距离超过 10px，取消长按
+            if (Math.abs(currentX - startX) > 10 || Math.abs(currentY - startY) > 10) {
+                clearTimeout(longPressTimer);
+            }
+        };
+
+        const endHandler = (e) => {
+            clearTimeout(longPressTimer);
+            if (isLongPress) {
+                if (e.cancelable) e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+
+        // 绑定触摸事件
+        contentDiv.addEventListener('touchstart', startHandler, { passive: false });
+        contentDiv.addEventListener('touchmove', moveHandler, { passive: true });
+        contentDiv.addEventListener('touchend', endHandler);
+        
+        // 绑定鼠标事件 (方便调试)
+        contentDiv.addEventListener('mousedown', startHandler);
+        contentDiv.addEventListener('mousemove', moveHandler);
+        contentDiv.addEventListener('mouseup', endHandler);
+        contentDiv.addEventListener('mouseleave', endHandler);
+
+        // 点击进入聊天 (如果是长按则不触发)
         contentDiv.addEventListener('click', (e) => {
-            // 如果刚刚发生了拖动，或者处于展开状态，则不进入聊天，而是收起
-            if (currentOpenSwipeItem === contentDiv) {
-                contentDiv.style.transition = 'transform 0.2s ease-out';
-                contentDiv.style.transform = 'translateX(0)';
-                currentOpenSwipeItem = null;
+            if (isLongPress) {
+                e.stopPropagation(); // 阻止冒泡，防止触发 document 的关闭菜单逻辑
+                e.preventDefault();
                 return;
             }
             openChatPage(msg);
         });
 
-        // 置顶逻辑
-        pinBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // 收起滑块
-            contentDiv.style.transform = 'translateX(0)';
-            currentOpenSwipeItem = null;
-
-            // 修改数据
-            msg.pinned = !msg.pinned;
-            
-            // 重新排序：置顶的在最前
-            chatMessagesData.sort((a, b) => {
-                if (a.pinned === b.pinned) return 0; // 保持原有相对顺序（不稳定排序可能变，但暂且这样）
-                return a.pinned ? -1 : 1;
-            });
-            
-            // 重新渲染
-            renderMessages(chatMessagesData);
-        });
-
-        // 删除逻辑
-        deleteBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            showConfirmModal(`确定删除与 ${msg.name} 的对话吗？`, () => {
-                // 从数组中移除
-                const idx = chatMessagesData.findIndex(m => m.id === msg.id);
-                if (idx !== -1) {
-                    chatMessagesData.splice(idx, 1);
-                    renderMessages(chatMessagesData);
-                    showToast('已删除');
-                }
-            });
-            // 恢复滑块状态 (虽然元素会被删除重绘)
-            contentDiv.style.transform = 'translateX(0)';
-            currentOpenSwipeItem = null;
-        });
-
         list.appendChild(container);
     });
+}
+
+function showMessageListContextMenu(msg, x, y) {
+    // 移除已存在的菜单
+    const existing = document.querySelector('.msg-list-context-menu');
+    if (existing) existing.remove();
+
+    const menu = document.createElement('div');
+    menu.className = 'msg-list-context-menu';
+    
+    // 纯文字，纵向排列
+    menu.innerHTML = `
+        <div class="msg-list-menu-item" id="list-ctx-pin">
+            <span>${msg.pinned ? '取消置顶' : '置顶'}</span>
+        </div>
+        <div class="msg-list-divider"></div>
+        <div class="msg-list-menu-item delete" id="list-ctx-delete">
+            <span>删除</span>
+        </div>
+    `;
+    
+    document.body.appendChild(menu);
+    
+    // 计算位置 (确保不超出屏幕)
+    const rect = menu.getBoundingClientRect();
+    let left = x;
+    let top = y;
+
+    if (left + rect.width > window.innerWidth) {
+        left = window.innerWidth - rect.width - 10;
+    }
+    if (top + rect.height > window.innerHeight) {
+        top = y - rect.height;
+    }
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+
+    // 绑定事件
+    menu.querySelector('#list-ctx-pin').addEventListener('click', () => {
+         msg.pinned = !msg.pinned;
+         // 重新排序
+         chatMessagesData.sort((a, b) => {
+             if (a.pinned === b.pinned) return 0;
+             return a.pinned ? -1 : 1;
+         });
+         saveChatMessagesData();
+         renderMessages(chatMessagesData);
+         menu.remove();
+    });
+    
+    menu.querySelector('#list-ctx-delete').addEventListener('click', () => {
+        menu.remove();
+        showConfirmModal(`确定删除与 ${msg.name} 的对话吗？`, () => {
+            const idx = chatMessagesData.findIndex(m => m.id === msg.id);
+            if (idx !== -1) {
+                chatMessagesData.splice(idx, 1);
+                saveChatMessagesData();
+                renderMessages(chatMessagesData);
+                showToast('已删除');
+            }
+        });
+    });
+
+    // 点击外部关闭
+    setTimeout(() => {
+        const closeHandler = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeHandler);
+            }
+        };
+        document.addEventListener('click', closeHandler);
+    }, 100);
 }
 
 // --- 聊天页面逻辑 ---
@@ -767,6 +787,15 @@ function sendUserMessage(text) {
     
     content.appendChild(row);
     content.scrollTop = content.scrollHeight;
+    
+    // 更新最新消息预览
+    if (currentChatCharacter) {
+        currentChatCharacter.preview = text;
+        const now = new Date();
+        currentChatCharacter.time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        saveChatMessagesData();
+        renderMessages(chatMessagesData);
+    }
 }
 
 // --- 搜索与角色生成逻辑 ---
@@ -971,16 +1000,29 @@ function renderCharacters(characters) {
         return;
     }
 
+    // 获取图库图片
+    const galleryImages = JSON.parse(localStorage.getItem('wawGalleryImages') || '[]');
+
     characters.forEach(char => {
         const card = document.createElement('div');
         card.className = 'character-card';
         
-        // 使用生成的颜色作为背景，如果没有则用默认
-        const bgColor = char.color || 'var(--card-bg)';
+        // 随机选择图库图片作为背景
+        let bgStyle = '';
+        if (galleryImages.length > 0) {
+            const randomImg = galleryImages[Math.floor(Math.random() * galleryImages.length)];
+            bgStyle = `background-image: url('${randomImg.url}'); background-size: cover; background-position: center;`;
+        } else {
+            // 使用生成的颜色作为背景，如果没有则用默认
+            const bgColor = char.color || 'var(--card-bg)';
+            bgStyle = `background-color: ${bgColor}; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); font-size: 40px;`;
+        }
         
+        const iconHtml = galleryImages.length > 0 ? '' : '<i class="fas fa-user"></i>';
+
         card.innerHTML = `
-            <div class="card-image" style="background-color: ${bgColor}; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.5); font-size: 40px;">
-                <i class="fas fa-user"></i>
+            <div class="card-image" style="${bgStyle}">
+                ${iconHtml}
             </div>
             <div class="card-info">
                 <div class="card-name" style="font-size: 16px; font-weight: bold;">${char.name}</div>
@@ -1939,6 +1981,7 @@ function initChatSettings() {
                     // 更新数据对象
                     if (currentChatCharacter) {
                         currentChatCharacter.background_image = result;
+                        saveChatMessagesData();
                     }
                 };
                 reader.readAsDataURL(file);
@@ -1971,6 +2014,7 @@ function initChatSettings() {
                     // 更新数据对象
                     if (currentChatCharacter) {
                         currentChatCharacter.avatar = result;
+                        saveChatMessagesData();
                         
                         // 如果当前是消息列表中的角色，尝试更新列表头像
                         updateMessageListAvatar(currentChatCharacter.name, result);
@@ -2028,7 +2072,7 @@ function applyChatBackground(imageUrl) {
 }
 
 function updateMessageListAvatar(name, avatarUrl) {
-    const messageItems = document.querySelectorAll('.message-item');
+    const messageItems = document.querySelectorAll('.message-item-container');
     messageItems.forEach(item => {
         const nameEl = item.querySelector('.message-name');
         if (nameEl && nameEl.textContent === name) {
@@ -2354,6 +2398,8 @@ function saveChatSettings() {
     if (chatTitle) chatTitle.textContent = newName;
 
     // 更新本地存储
+    saveChatMessagesData();
+    renderMessages(chatMessagesData);
     updateCharacterInStorage(oldName, currentChatCharacter);
 
     // --- 实时更新聊天界面 (开场白) ---
@@ -2450,6 +2496,128 @@ function updateCharacterInStorage(oldName, updatedChar) {
             const tagName = activeTag.querySelector('span').textContent;
             loadSavedCharacters(tagName);
         }
+    }
+}
+
+// --- 图库页面逻辑 ---
+
+function initGallery() {
+    const menuGallery = Array.from(document.querySelectorAll('.menu-item')).find(item => item.textContent.trim() === '图库');
+    const galleryPage = document.getElementById('gallery-page');
+    const closeGalleryBtn = document.getElementById('close-gallery-btn');
+    
+    if (menuGallery && galleryPage) {
+        menuGallery.addEventListener('click', () => {
+            galleryPage.classList.add('active');
+            renderGallery();
+        });
+    }
+
+    if (closeGalleryBtn && galleryPage) {
+        closeGalleryBtn.addEventListener('click', () => {
+            galleryPage.classList.remove('active');
+        });
+    }
+
+    // 本地上传
+    const localUploadBtn = document.getElementById('local-upload-btn');
+    const fileInput = document.getElementById('gallery-file-input');
+    
+    if (localUploadBtn && fileInput) {
+        localUploadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            const files = e.target.files;
+            if (files && files.length > 0) {
+                Array.from(files).forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        addGalleryImage(event.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                });
+                // 清空 input，允许重复上传相同文件
+                fileInput.value = '';
+            }
+        });
+    }
+
+    // URL 上传
+    const urlUploadBtn = document.getElementById('url-upload-btn');
+    const urlInput = document.getElementById('gallery-url-input');
+    
+    if (urlUploadBtn && urlInput) {
+        urlUploadBtn.addEventListener('click', () => {
+            const urls = urlInput.value.split('\n').map(u => u.trim()).filter(u => u);
+            if (urls.length > 0) {
+                urls.forEach(url => {
+                    addGalleryImage(url);
+                });
+                urlInput.value = '';
+                showToast(`成功添加 ${urls.length} 张图片`);
+            } else {
+                showToast('请输入图片 URL');
+            }
+        });
+    }
+}
+
+function addGalleryImage(url) {
+    const images = JSON.parse(localStorage.getItem('wawGalleryImages') || '[]');
+    images.push({
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+        url: url
+    });
+    localStorage.setItem('wawGalleryImages', JSON.stringify(images));
+    renderGallery();
+    showToast('图片添加成功');
+}
+
+function deleteGalleryImage(id) {
+    let images = JSON.parse(localStorage.getItem('wawGalleryImages') || '[]');
+    images = images.filter(img => img.id !== id);
+    localStorage.setItem('wawGalleryImages', JSON.stringify(images));
+    renderGallery();
+    showToast('图片已删除');
+}
+
+function renderGallery() {
+    const grid = document.getElementById('gallery-grid');
+    const emptyState = document.getElementById('gallery-empty-state');
+    if (!grid || !emptyState) return;
+
+    const images = JSON.parse(localStorage.getItem('wawGalleryImages') || '[]');
+    
+    grid.innerHTML = '';
+    
+    if (images.length === 0) {
+        grid.style.display = 'none';
+        emptyState.style.display = 'flex';
+    } else {
+        grid.style.display = 'grid';
+        emptyState.style.display = 'none';
+        
+        images.forEach(img => {
+            const item = document.createElement('div');
+            item.className = 'gallery-item';
+            item.innerHTML = `
+                <img src="${img.url}" alt="Gallery Image">
+                <div class="gallery-item-delete" data-id="${img.id}">
+                    <i class="fas fa-times"></i>
+                </div>
+            `;
+            
+            item.querySelector('.gallery-item-delete').addEventListener('click', (e) => {
+                e.stopPropagation();
+                showConfirmModal('确定删除这张图片吗？', () => {
+                    deleteGalleryImage(img.id);
+                });
+            });
+            
+            grid.appendChild(item);
+        });
     }
 }
 
@@ -2644,4 +2812,17 @@ function appendAssistantMessage(text) {
     addLatestMessageToolbar(bubble);
 
     content.scrollTop = content.scrollHeight;
+    
+    // 更新最新消息预览
+    if (currentChatCharacter) {
+        // 提取纯文本作为预览
+        let previewText = text.replace(/\((.*?)\)/g, '').trim(); // 移除动作描述
+        if (!previewText) previewText = text; // 如果全是动作，就显示原文本
+        
+        currentChatCharacter.preview = previewText;
+        const now = new Date();
+        currentChatCharacter.time = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        saveChatMessagesData();
+        renderMessages(chatMessagesData);
+    }
 }
