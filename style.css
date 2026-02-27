@@ -364,6 +364,7 @@ body {
     display: none;
     flex-direction: column;
     z-index: 2000; /* 高于底部导航 */
+    animation: fadeIn 0.2s ease-in-out;
 }
 
 .sub-page.active {
@@ -738,14 +739,15 @@ textarea { resize: none; }
 
 /* --- 图库页面样式 --- */
 .gallery-upload-section {
-    margin-bottom: 20px;
+    margin-bottom: 15px; /* 减小与下方图片网格的间距 */
+    margin-top: -24px; /* 减小与顶部栏的间距 */
 }
 
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
     gap: 10px;
-    padding: 10px 0;
+    padding: 0 0 10px 0; /* 移除顶部 padding，进一步减小间距 */
 }
 
 .gallery-item {
@@ -765,25 +767,63 @@ textarea { resize: none; }
     display: block;
 }
 
-.gallery-item-delete {
+/* 图库管理模式样式 */
+.gallery-item-checkbox {
     position: absolute;
     top: 5px;
-    right: 5px;
-    background: rgba(0,0,0,0.6);
-    color: white;
+    left: 5px;
     width: 24px;
     height: 24px;
     border-radius: 50%;
-    display: flex;
+    background: rgba(0,0,0,0.4);
+    border: 2px solid white;
+    display: none; /* 默认隐藏 */
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    font-size: 12px;
-    transition: background 0.2s;
+    z-index: 10;
+    transition: all 0.2s;
 }
 
-.gallery-item-delete:hover {
-    background: var(--danger-color);
+.gallery-item-checkbox i {
+    color: white;
+    font-size: 12px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.gallery-item.selected .gallery-item-checkbox {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.gallery-item.selected .gallery-item-checkbox i {
+    opacity: 1;
+}
+
+/* 当处于管理模式时 */
+.gallery-manage-mode .gallery-item-checkbox {
+    display: flex;
+}
+
+.gallery-manage-mode .gallery-item {
+    cursor: pointer;
+}
+
+.gallery-manage-mode .gallery-item::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0);
+    transition: background 0.2s;
+    pointer-events: none;
+}
+
+.gallery-manage-mode .gallery-item.selected::after {
+    background: rgba(0,0,0,0.3);
 }
 
 /* --- API 设置样式 --- */
@@ -946,7 +986,7 @@ input[type="range"]::-webkit-slider-thumb {
     flex-direction: column;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     animation: fadeIn 0.2s ease-out;
-    min-width: 100px;
+    min-width: 86px; /* 缩小最小宽度以减小左右间距 */
     overflow: hidden;
 }
 
@@ -954,10 +994,10 @@ input[type="range"]::-webkit-slider-thumb {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 12px 0;
+    padding: 12px 15px; /* 增加一点左右内边距，但整体宽度由内容和min-width决定 */
     color: #fff;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 15px;
     transition: background-color 0.2s;
     width: 100%;
 }
@@ -978,6 +1018,28 @@ input[type="range"]::-webkit-slider-thumb {
     height: 1px;
     background-color: rgba(255, 255, 255, 0.1);
     width: 100%;
+}
+
+/* 日间模式适配 (消息列表长按菜单) */
+body.light-mode .msg-list-context-menu {
+    background-color: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+}
+
+body.light-mode .msg-list-menu-item {
+    color: #333;
+}
+
+body.light-mode .msg-list-menu-item:active {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .msg-list-menu-item.delete {
+    color: #ff4757;
+}
+
+body.light-mode .msg-list-divider {
+    background-color: rgba(0, 0, 0, 0.08);
 }
 
 .message-avatar {
@@ -1035,20 +1097,18 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* 置顶样式 */
 .message-item-container.pinned .message-item-content {
-    background-color: rgba(58, 110, 165, 0.1); /* 淡淡的蓝色背景表示置顶 */
+    background-color: rgba(128, 128, 128, 0.15); /* 夜间模式灰色背景 */
 }
 .message-item-container.pinned .message-item-content:active {
-    background-color: rgba(58, 110, 165, 0.2);
+    background-color: rgba(128, 128, 128, 0.25);
 }
-.message-item-container.pinned::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background-color: #3a6ea5;
-    z-index: 3;
+
+/* 日间模式适配 (置顶样式) */
+body.light-mode .message-item-container.pinned .message-item-content {
+    background-color: rgba(0, 0, 0, 0.05); /* 日间模式灰白色背景 */
+}
+body.light-mode .message-item-container.pinned .message-item-content:active {
+    background-color: rgba(0, 0, 0, 0.1);
 }
 
 /* --- 推荐页面样式 --- */
@@ -1510,6 +1570,117 @@ input[type="range"]::-webkit-slider-thumb {
     color: #666;
     font-size: 14px;
     font-style: italic;
+}
+
+/* 聊天管理底部栏 */
+.chat-manage-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 10px 15px;
+    padding-bottom: calc(10px + env(safe-area-inset-bottom));
+    background-color: rgba(62, 64, 63, 0.9);
+    backdrop-filter: blur(10px);
+    display: none; /* 默认隐藏 */
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid rgba(255,255,255,0.1);
+    z-index: 100;
+}
+
+.chat-manage-footer.active {
+    display: flex;
+}
+
+.chat-manage-btn {
+    padding: 10px 20px;
+    border-radius: 20px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.chat-manage-btn.delete {
+    background-color: var(--danger-color);
+}
+
+/* 聊天消息多选框 */
+.chat-message-checkbox {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    margin-right: 10px;
+    margin-top: 10px;
+    display: none; /* 默认隐藏 */
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.chat-message-checkbox i {
+    color: white;
+    font-size: 12px;
+    opacity: 0;
+}
+
+.chat-message-row.manage-mode .chat-message-checkbox {
+    display: flex;
+}
+
+.chat-message-row.manage-mode.selected .chat-message-checkbox {
+    background-color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.chat-message-row.manage-mode.selected .chat-message-checkbox i {
+    opacity: 1;
+}
+
+/* 聊天气泡编辑模式 */
+.message-bubble.editing {
+    width: 100%;
+    max-width: 100%;
+}
+
+.message-edit-textarea {
+    width: 100%;
+    min-height: 60px;
+    background: transparent;
+    border: 1px solid rgba(0,0,0,0.2);
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 14px;
+    color: inherit;
+    resize: vertical;
+    margin-bottom: 10px;
+    font-family: inherit;
+}
+
+.message-edit-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.message-edit-btn {
+    padding: 6px 12px;
+    border-radius: 15px;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    background-color: rgba(0,0,0,0.1);
+    color: inherit;
+}
+
+.message-edit-btn.save {
+    background-color: rgba(0,0,0,0.8);
+    color: #fff;
 }
 
 /* 底部输入栏 */
