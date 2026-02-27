@@ -181,11 +181,13 @@
     <!-- 图库页面 -->
     <div class="sub-page" id="gallery-page">
         <div class="page-header">
-            <button class="header-btn" id="close-gallery-btn">
+            <button class="header-btn" id="close-gallery-btn" style="width: auto; padding: 0 10px; font-size: 16px;">
                 <i class="fas fa-chevron-left"></i>
             </button>
             <h2>图库</h2>
-            <div style="width: 32px;"></div>
+            <button class="header-btn" id="manage-gallery-btn" style="width: auto; padding: 0 10px; font-size: 16px;">
+                管理
+            </button>
         </div>
         <div class="page-content">
             <div class="gallery-upload-section">
@@ -311,7 +313,11 @@
         <div class="chat-content" id="chat-content">
             <!-- 聊天记录将由 JS 动态生成 -->
         </div>
-        <div class="chat-footer">
+        <div class="chat-manage-footer" id="chat-manage-footer">
+            <button class="chat-manage-btn" id="chat-manage-cancel">取消</button>
+            <button class="chat-manage-btn delete" id="chat-manage-delete">删除</button>
+        </div>
+        <div class="chat-footer" id="chat-footer">
             <div class="chat-input-area">
                 <button class="chat-action-btn wa-btn">wa!</button>
                 <div class="chat-input-wrapper">
