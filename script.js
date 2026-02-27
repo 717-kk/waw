@@ -378,8 +378,11 @@ function showMessageListContextMenu(msg, x, y) {
     menu.style.left = `${left}px`;
     menu.style.top = `${top}px`;
 
+    const createTime = Date.now();
+
     // 绑定事件
-    menu.querySelector('#list-ctx-pin').addEventListener('click', () => {
+    menu.querySelector('#list-ctx-pin').addEventListener('click', (e) => {
+         if (Date.now() - createTime < 300) return; // 防止长按松手时的穿透点击
          msg.pinned = !msg.pinned;
          // 重新排序
          chatMessagesData.sort((a, b) => {
@@ -391,7 +394,8 @@ function showMessageListContextMenu(msg, x, y) {
          menu.remove();
     });
     
-    menu.querySelector('#list-ctx-delete').addEventListener('click', () => {
+    menu.querySelector('#list-ctx-delete').addEventListener('click', (e) => {
+        if (Date.now() - createTime < 300) return; // 防止长按松手时的穿透点击
         menu.remove();
         showConfirmModal(`确定删除与 ${msg.name} 的对话吗？`, () => {
             const idx = chatMessagesData.findIndex(m => m.id === msg.id);
@@ -461,6 +465,39 @@ function initChatPage() {
         });
     }
 
+    // 绑定聊天管理底部栏事件
+    const manageCancelBtn = document.getElementById('chat-manage-cancel');
+    const manageDeleteBtn = document.getElementById('chat-manage-delete');
+    
+    if (manageCancelBtn) {
+        manageCancelBtn.addEventListener('click', exitChatManageMode);
+    }
+    
+    if (manageDeleteBtn) {
+        manageDeleteBtn.addEventListener('click', () => {
+            if (selectedChatMessages.size === 0) {
+                showToast('请先选择要删除的消息');
+                return;
+            }
+            
+            showConfirmModal(`确定删除选中的 ${selectedChatMessages.size} 条消息吗？`, () => {
+                selectedChatMessages.forEach(row => row.remove());
+                exitChatManageMode();
+                showToast('已删除');
+                
+                // 保存到本地存储
+                saveCurrentChatHistory();
+                
+                // 更新当前对话条数
+                const currentChatCount = document.getElementById('current-chat-count');
+                const chatContent = document.getElementById('chat-content');
+                if (currentChatCount && chatContent) {
+                    currentChatCount.textContent = chatContent.querySelectorAll('.chat-message-row').length;
+                }
+            });
+        });
+    }
+
     // 绑定 "wa!" 按钮事件
     const waBtn = document.querySelector('.wa-btn');
     if (waBtn) {
@@ -520,9 +557,9 @@ function showContextMenu(bubble) {
             <i class="far fa-heart"></i>
             <span>收藏</span>
         </div>
-         <div class="msg-context-menu-item" id="ctx-undo">
-            <i class="fas fa-undo"></i>
-            <span>回溯</span>
+         <div class="msg-context-menu-item" id="ctx-delete">
+            <i class="fas fa-trash-alt"></i>
+            <span>删除</span>
         </div>
     `;
 
@@ -543,7 +580,7 @@ function showContextMenu(bubble) {
     });
 
     menu.querySelector('#ctx-modify').addEventListener('click', () => {
-        showToast('修改功能');
+        enterEditMode(bubble);
         menu.remove();
     });
 
@@ -552,8 +589,8 @@ function showContextMenu(bubble) {
         menu.remove();
     });
 
-    menu.querySelector('#ctx-undo').addEventListener('click', () => {
-        showToast('回溯功能');
+    menu.querySelector('#ctx-delete').addEventListener('click', () => {
+        enterChatManageMode();
         menu.remove();
     });
 
@@ -601,11 +638,170 @@ function addLatestMessageToolbar(bubble) {
         e.stopPropagation();
     });
 
-    toolbar.querySelector('.fa-pen').addEventListener('click', () => showToast('修改功能'));
+    toolbar.querySelector('.fa-pen').addEventListener('click', () => enterEditMode(bubble));
     toolbar.querySelector('.fa-chevron-up').addEventListener('click', () => showToast('选择功能'));
     toolbar.querySelector('.fa-redo').addEventListener('click', () => showToast('重回功能'));
 
     bubble.appendChild(toolbar);
+}
+
+// --- 聊天管理模式 (多选删除) ---
+let isChatManageMode = false;
+let selectedChatMessages = new Set();
+
+function enterChatManageMode() {
+    isChatManageMode = true;
+    selectedChatMessages.clear();
+    
+    const chatFooter = document.getElementById('chat-footer');
+    const manageFooter = document.getElementById('chat-manage-footer');
+    const rows = document.querySelectorAll('#chat-content .chat-message-row');
+    
+    if (chatFooter) chatFooter.style.display = 'none';
+    if (manageFooter) manageFooter.classList.add('active');
+    
+    updateChatManageDeleteBtn();
+
+    rows.forEach(row => {
+        row.classList.add('manage-mode');
+        
+        // 确保复选框存在
+        if (!row.querySelector('.chat-message-checkbox')) {
+            const checkbox = document.createElement('div');
+            checkbox.className = 'chat-message-checkbox';
+            checkbox.innerHTML = '<i class="fas fa-check"></i>';
+            row.insertBefore(checkbox, row.firstChild);
+        }
+        
+        // 绑定点击事件
+        row.onclick = (e) => {
+            if (!isChatManageMode) return;
+            e.stopPropagation();
+            
+            if (row.classList.contains('selected')) {
+                row.classList.remove('selected');
+                selectedChatMessages.delete(row);
+            } else {
+                row.classList.add('selected');
+                selectedChatMessages.add(row);
+            }
+            updateChatManageDeleteBtn();
+        };
+    });
+}
+
+function exitChatManageMode() {
+    isChatManageMode = false;
+    selectedChatMessages.clear();
+    
+    const chatFooter = document.getElementById('chat-footer');
+    const manageFooter = document.getElementById('chat-manage-footer');
+    const rows = document.querySelectorAll('#chat-content .chat-message-row');
+    
+    if (chatFooter) chatFooter.style.display = 'flex';
+    if (manageFooter) manageFooter.classList.remove('active');
+    
+    rows.forEach(row => {
+        row.classList.remove('manage-mode');
+        row.classList.remove('selected');
+        row.onclick = null; // 移除点击事件
+    });
+}
+
+function updateChatManageDeleteBtn() {
+    const deleteBtn = document.getElementById('chat-manage-delete');
+    if (deleteBtn) {
+        deleteBtn.textContent = selectedChatMessages.size > 0 ? `删除(${selectedChatMessages.size})` : '删除';
+    }
+}
+
+// --- 聊天气泡编辑模式 ---
+function enterEditMode(bubble) {
+    if (bubble.classList.contains('editing')) return;
+    
+    // 保存原始 HTML 以便取消时恢复
+    const originalHtml = bubble.innerHTML;
+    
+    // 提取纯文本 (去除工具栏和 HTML 标签)
+    const clone = bubble.cloneNode(true);
+    const toolbar = clone.querySelector('.latest-msg-toolbar');
+    if (toolbar) toolbar.remove();
+    
+    // 将 <br> 转换为换行符，移除 span 标签但保留内容
+    let text = clone.innerHTML;
+    text = text.replace(/<br\s*[\/]?>/gi, '\n');
+    text = text.replace(/<span class="message-action">\((.*?)\)<\/span>/g, '($1)');
+    // 移除其他可能的 HTML 标签
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = text;
+    text = tempDiv.textContent || tempDiv.innerText || '';
+    text = text.trim();
+
+    bubble.classList.add('editing');
+    
+    bubble.innerHTML = `
+        <textarea class="message-edit-textarea">${text}</textarea>
+        <div class="message-edit-actions">
+            <button class="message-edit-btn cancel">取消</button>
+            <button class="message-edit-btn save">保存</button>
+        </div>
+    `;
+    
+    const textarea = bubble.querySelector('.message-edit-textarea');
+    textarea.focus();
+    
+    // 自动调整高度
+    textarea.style.height = 'auto';
+    textarea.style.height = (textarea.scrollHeight) + 'px';
+    textarea.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+    
+    // 阻止冒泡，防止触发 Context Menu
+    bubble.onclick = (e) => e.stopPropagation();
+    
+    bubble.querySelector('.cancel').addEventListener('click', (e) => {
+        e.stopPropagation();
+        bubble.classList.remove('editing');
+        bubble.innerHTML = originalHtml;
+        bubble.onclick = null;
+        
+        // 重新绑定工具栏事件 (如果是最新消息)
+        const newToolbar = bubble.querySelector('.latest-msg-toolbar');
+        if (newToolbar) {
+            newToolbar.addEventListener('click', (ev) => ev.stopPropagation());
+            newToolbar.querySelector('.fa-pen').addEventListener('click', () => enterEditMode(bubble));
+            newToolbar.querySelector('.fa-chevron-up').addEventListener('click', () => showToast('选择功能'));
+            newToolbar.querySelector('.fa-redo').addEventListener('click', () => showToast('重回功能'));
+        }
+    });
+    
+    bubble.querySelector('.save').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const newText = textarea.value.trim();
+        if (!newText) {
+            showToast('消息内容不能为空');
+            return;
+        }
+        
+        bubble.classList.remove('editing');
+        bubble.onclick = null;
+        
+        // 处理文本格式
+        let contentHtml = newText.replace(/\((.*?)\)/g, '<span class="message-action">($1)</span>');
+        contentHtml = contentHtml.replace(/\n/g, '<br>');
+        
+        bubble.innerHTML = contentHtml;
+        
+        // 如果原来有工具栏，重新添加
+        if (originalHtml.includes('latest-msg-toolbar')) {
+            addLatestMessageToolbar(bubble);
+        }
+        
+        // 保存到本地存储
+        saveCurrentChatHistory();
+    });
 }
 
 function removeAllToolbars() {
@@ -663,12 +859,49 @@ function initChatToolbar() {
             showConfirmModal('确定清空当前聊天记录吗？', () => {
                 if (chatContent) {
                     chatContent.innerHTML = '';
-                    // 如果需要，也可以清空 currentChatCharacter 中的历史记录标志
+                    saveCurrentChatHistory();
                 }
                 showToast('已清空');
             });
         });
     }
+}
+
+function saveCurrentChatHistory() {
+    if (!currentChatCharacter) return;
+    
+    const chatContent = document.getElementById('chat-content');
+    if (!chatContent) return;
+
+    const rows = Array.from(chatContent.querySelectorAll('.chat-message-row'));
+    const history = [];
+
+    rows.forEach(row => {
+        const bubble = row.querySelector('.message-bubble');
+        if (!bubble) return;
+
+        const type = row.classList.contains('right') ? 'right' : 'left';
+        const isGreeting = row.classList.contains('is-greeting');
+        
+        // 提取纯文本，将 <br> 转换回 \n，将 <span class="message-action">(...)</span> 转换回 (...)
+        const clone = bubble.cloneNode(true);
+        const toolbar = clone.querySelector('.latest-msg-toolbar');
+        if (toolbar) toolbar.remove();
+        
+        let text = clone.innerHTML;
+        text = text.replace(/<br\s*[\/]?>/gi, '\n');
+        text = text.replace(/<span class="message-action">\((.*?)\)<\/span>/g, '($1)');
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = text;
+        text = tempDiv.textContent || tempDiv.innerText || '';
+        text = text.trim();
+
+        history.push({ type, text, isGreeting });
+    });
+
+    const storageKey = `starChatHistory_${currentChatCharacter.id || currentChatCharacter.name}`;
+    localStorage.setItem(storageKey, JSON.stringify(history));
 }
 
 function openChatPage(character) {
@@ -688,8 +921,15 @@ function openChatPage(character) {
         applyChatBackground(defaultBg);
     }
     
-    // 模拟聊天记录
-    const history = getMockChatHistory(character);
+    // 加载聊天记录
+    const storageKey = `starChatHistory_${character.id || character.name}`;
+    let history = JSON.parse(localStorage.getItem(storageKey));
+    
+    if (!history) {
+        history = getMockChatHistory(character);
+        localStorage.setItem(storageKey, JSON.stringify(history));
+    }
+    
     renderChatHistory(history, content, character);
     
     chatPage.classList.add('active');
@@ -748,6 +988,8 @@ function renderChatHistory(history, container, character) {
         
         // 处理文本中的动作描述 (括号内容)
         let contentHtml = msg.text.replace(/\((.*?)\)/g, '<span class="message-action">($1)</span>');
+        // 处理换行
+        contentHtml = contentHtml.replace(/\n/g, '<br>');
         
         const bubbleColor = msg.type === 'left' ? leftColor : rightColor;
 
@@ -779,15 +1021,22 @@ function sendUserMessage(text) {
     // 获取我的气泡颜色 (从当前角色配置中读取，或者全局配置)
     const rightColor = currentChatCharacter.bubble_color_right || '#ffffff';
 
+    // 处理动作描述和换行
+    let contentHtml = text.replace(/\((.*?)\)/g, '<span class="message-action">($1)</span>');
+    contentHtml = contentHtml.replace(/\n/g, '<br>');
+
     row.innerHTML = `
         <div class="message-bubble right" style="background-color: ${rightColor}">
-            ${text}
+            ${contentHtml}
         </div>
     `;
     
     content.appendChild(row);
     content.scrollTop = content.scrollHeight;
     
+    // 保存到本地存储
+    saveCurrentChatHistory();
+
     // 更新最新消息预览
     if (currentChatCharacter) {
         currentChatCharacter.preview = text;
@@ -2437,6 +2686,9 @@ function saveChatSettings() {
                 existingGreetingRow.remove();
             }
         }
+        
+        // 保存到本地存储
+        saveCurrentChatHistory();
     }
 
     // --- 实时更新对话条数 ---
@@ -2501,21 +2753,74 @@ function updateCharacterInStorage(oldName, updatedChar) {
 
 // --- 图库页面逻辑 ---
 
+let isGalleryManageMode = false;
+let selectedGalleryImages = new Set();
+
 function initGallery() {
     const menuGallery = Array.from(document.querySelectorAll('.menu-item')).find(item => item.textContent.trim() === '图库');
     const galleryPage = document.getElementById('gallery-page');
     const closeGalleryBtn = document.getElementById('close-gallery-btn');
+    const manageGalleryBtn = document.getElementById('manage-gallery-btn');
+    const galleryGrid = document.getElementById('gallery-grid');
     
     if (menuGallery && galleryPage) {
         menuGallery.addEventListener('click', () => {
             galleryPage.classList.add('active');
+            // 重置管理模式状态
+            isGalleryManageMode = false;
+            selectedGalleryImages.clear();
+            updateGalleryHeader();
+            if (galleryGrid) galleryGrid.classList.remove('gallery-manage-mode');
             renderGallery();
         });
     }
 
     if (closeGalleryBtn && galleryPage) {
         closeGalleryBtn.addEventListener('click', () => {
-            galleryPage.classList.remove('active');
+            if (isGalleryManageMode) {
+                // 如果在管理模式，点击取消则退出管理模式
+                isGalleryManageMode = false;
+                selectedGalleryImages.clear();
+                updateGalleryHeader();
+                if (galleryGrid) galleryGrid.classList.remove('gallery-manage-mode');
+                renderGallery();
+            } else {
+                // 否则关闭页面
+                galleryPage.classList.remove('active');
+            }
+        });
+    }
+
+    if (manageGalleryBtn) {
+        manageGalleryBtn.addEventListener('click', () => {
+            if (isGalleryManageMode) {
+                // 执行删除操作
+                if (selectedGalleryImages.size > 0) {
+                    showConfirmModal(`确定删除选中的 ${selectedGalleryImages.size} 张图片吗？`, () => {
+                        let images = JSON.parse(localStorage.getItem('wawGalleryImages') || '[]');
+                        images = images.filter(img => !selectedGalleryImages.has(img.id));
+                        localStorage.setItem('wawGalleryImages', JSON.stringify(images));
+                        
+                        // 退出管理模式
+                        isGalleryManageMode = false;
+                        selectedGalleryImages.clear();
+                        updateGalleryHeader();
+                        if (galleryGrid) galleryGrid.classList.remove('gallery-manage-mode');
+                        
+                        renderGallery();
+                        showToast('已删除选中图片');
+                    });
+                } else {
+                    showToast('请先选择要删除的图片');
+                }
+            } else {
+                // 进入管理模式
+                isGalleryManageMode = true;
+                selectedGalleryImages.clear();
+                updateGalleryHeader();
+                if (galleryGrid) galleryGrid.classList.add('gallery-manage-mode');
+                renderGallery(); // 重新渲染以应用样式
+            }
         });
     }
 
@@ -2583,6 +2888,23 @@ function deleteGalleryImage(id) {
     showToast('图片已删除');
 }
 
+function updateGalleryHeader() {
+    const closeBtn = document.getElementById('close-gallery-btn');
+    const manageBtn = document.getElementById('manage-gallery-btn');
+    
+    if (!closeBtn || !manageBtn) return;
+
+    if (isGalleryManageMode) {
+        closeBtn.innerHTML = '取消';
+        manageBtn.innerHTML = '删除';
+        manageBtn.style.color = 'var(--danger-color)';
+    } else {
+        closeBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        manageBtn.innerHTML = '管理';
+        manageBtn.style.color = 'var(--accent-color)';
+    }
+}
+
 function renderGallery() {
     const grid = document.getElementById('gallery-grid');
     const emptyState = document.getElementById('gallery-empty-state');
@@ -2595,6 +2917,12 @@ function renderGallery() {
     if (images.length === 0) {
         grid.style.display = 'none';
         emptyState.style.display = 'flex';
+        // 如果没有图片，自动退出管理模式
+        if (isGalleryManageMode) {
+            isGalleryManageMode = false;
+            updateGalleryHeader();
+            grid.classList.remove('gallery-manage-mode');
+        }
     } else {
         grid.style.display = 'grid';
         emptyState.style.display = 'none';
@@ -2602,18 +2930,34 @@ function renderGallery() {
         images.forEach(img => {
             const item = document.createElement('div');
             item.className = 'gallery-item';
+            if (isGalleryManageMode && selectedGalleryImages.has(img.id)) {
+                item.classList.add('selected');
+            }
+            
             item.innerHTML = `
                 <img src="${img.url}" alt="Gallery Image">
-                <div class="gallery-item-delete" data-id="${img.id}">
-                    <i class="fas fa-times"></i>
+                <div class="gallery-item-checkbox">
+                    <i class="fas fa-check"></i>
                 </div>
             `;
-            
-            item.querySelector('.gallery-item-delete').addEventListener('click', (e) => {
-                e.stopPropagation();
-                showConfirmModal('确定删除这张图片吗？', () => {
-                    deleteGalleryImage(img.id);
-                });
+
+            // 整个卡片点击事件 (管理模式下用于多选)
+            item.addEventListener('click', () => {
+                if (!isGalleryManageMode) return;
+                
+                if (selectedGalleryImages.has(img.id)) {
+                    selectedGalleryImages.delete(img.id);
+                    item.classList.remove('selected');
+                } else {
+                    selectedGalleryImages.add(img.id);
+                    item.classList.add('selected');
+                }
+                
+                // 更新删除按钮文本显示选中数量
+                const manageBtn = document.getElementById('manage-gallery-btn');
+                if (manageBtn) {
+                    manageBtn.innerHTML = selectedGalleryImages.size > 0 ? `删除(${selectedGalleryImages.size})` : '删除';
+                }
             });
             
             grid.appendChild(item);
@@ -2813,6 +3157,9 @@ function appendAssistantMessage(text) {
 
     content.scrollTop = content.scrollHeight;
     
+    // 保存到本地存储
+    saveCurrentChatHistory();
+
     // 更新最新消息预览
     if (currentChatCharacter) {
         // 提取纯文本作为预览
